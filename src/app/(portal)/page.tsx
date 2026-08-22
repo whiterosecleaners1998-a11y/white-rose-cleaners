@@ -22,6 +22,28 @@ async function getPriceList() {
   return items.map((item) => ({ ...item, price: Number(item.price) }));
 }
 
+async function getBundles() {
+  const bundles = await prisma.bundle.findMany({
+    where: { active: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    include: {
+      items: { include: { item: true }, orderBy: { item: { sortOrder: "asc" } } },
+    },
+  });
+  return bundles.map((bundle) => ({
+    id: bundle.id,
+    name: bundle.name,
+    items: bundle.items
+      .filter((line) => line.item.active)
+      .map((line) => ({
+        itemId: line.itemId,
+        name: line.item.name,
+        price: Number(line.item.price),
+        quantity: line.quantity,
+      })),
+  }));
+}
+
 async function getRecentBookings() {
   const bookings = await prisma.booking.findMany({
     include: { items: true },
@@ -32,8 +54,9 @@ async function getRecentBookings() {
 }
 
 export default async function DashboardPage() {
-  const [priceList, recentBookings] = await Promise.all([
+  const [priceList, bundles, recentBookings] = await Promise.all([
     getPriceList(),
+    getBundles(),
     getRecentBookings(),
   ]);
 
@@ -60,7 +83,7 @@ export default async function DashboardPage() {
               </AlertDescription>
             </Alert>
           ) : (
-            <BookingForm priceList={priceList} />
+            <BookingForm priceList={priceList} bundles={bundles} />
           )}
         </CardContent>
       </Card>

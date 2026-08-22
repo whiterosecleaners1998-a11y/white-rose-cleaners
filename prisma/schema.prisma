@@ -45,9 +45,31 @@ model BookingItem {
 }
 
 model PriceListItem {
-  id        String  @id @default(cuid())
-  name      String  @unique
-  price     Decimal @db.Decimal(10, 2)
-  active    Boolean @default(true)
-  sortOrder Int     @default(0)
+  id        String       @id @default(cuid())
+  name      String       @unique
+  price     Decimal      @db.Decimal(10, 2)
+  active    Boolean      @default(true)
+  sortOrder Int          @default(0)
+  bundles   BundleItem[]
+}
+
+// A named group of price list items, e.g. "Suit" = 1 Kameez + 1 Shalwar.
+// Pressing it on the booking form drops every line into the cart at once.
+model Bundle {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  active    Boolean      @default(true)
+  sortOrder Int          @default(0)
+  items     BundleItem[]
+}
+
+model BundleItem {
+  id       String        @id @default(cuid())
+  bundle   Bundle        @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  bundleId String
+  item     PriceListItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId   String
+  quantity Int           @default(1)
+
+  @@unique([bundleId, itemId])
 }
