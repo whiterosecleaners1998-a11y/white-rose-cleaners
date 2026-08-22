@@ -103,8 +103,64 @@ export default function PriceListEditor({
     }
   }
 
+  async function removeAll() {
+    setBusyId("__all__");
+    try {
+      const res = await fetch("/api/prices", { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? "Failed to clear the price list");
+        return;
+      }
+      setItems([]);
+      toast.success(
+        data.removed === 1 ? "1 item removed." : `${data.removed} items removed.`
+      );
+      router.refresh();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <div className="space-y-5">
+      {items.length > 0 && (
+        <div className="flex justify-end">
+          <AlertDialog>
+            <AlertDialogTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={busyId === "__all__"}
+                />
+              }
+            >
+              <Trash2 className="text-destructive" />
+              Remove all
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Remove all {items.length} items?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  The price list is emptied so you can enter your own. Any
+                  bundles built from these items are emptied too. Past bookings
+                  keep their own copy of every line and are not affected.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={removeAll}>
+                  Remove all
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
+
       {items.length === 0 ? (
         <p className="text-sm text-muted-foreground">No items yet.</p>
       ) : (

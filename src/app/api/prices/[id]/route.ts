@@ -26,14 +26,20 @@ export async function PATCH(
   return NextResponse.json({ ...item, price: Number(item.price) });
 }
 
+// Past bookings copy the item name and unit price onto BookingItem, so removing
+// a price list row never rewrites history. Removing the row outright (rather
+// than flipping `active`) is what frees the unique name to be added again.
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  await prisma.priceListItem.update({
-    where: { id },
-    data: { active: false },
-  });
+  const removed = await prisma.priceListItem
+    .delete({ where: { id } })
+    .catch(() => null);
+
+  if (!removed) {
+    return NextResponse.json({ error: "Item not found." }, { status: 404 });
+  }
   return NextResponse.json({ ok: true });
 }
