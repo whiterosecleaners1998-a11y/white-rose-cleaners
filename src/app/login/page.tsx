@@ -14,6 +14,18 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+// Routes a signed-in user may be sent back to. Anything else — an off-site URL,
+// a protocol-relative "//evil.com", or a typo'd path like "/l" — falls back to "/"
+// so a successful login never lands on a 404 or leaves the site.
+const RETURNABLE_PATHS = ["/orders", "/search", "/settings/prices", "/bookings/"];
+
+function safeRedirectPath(raw: string | null): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/";
+  const path = raw.split(/[?#]/)[0];
+  if (path === "/") return raw;
+  return RETURNABLE_PATHS.some((allowed) => path.startsWith(allowed)) ? raw : "/";
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -36,8 +48,7 @@ function LoginForm() {
         setError(data.error ?? "Login failed");
         return;
       }
-      const from = searchParams.get("from") ?? "/";
-      router.push(from);
+      router.push(safeRedirectPath(searchParams.get("from")));
       router.refresh();
     } finally {
       setLoading(false);
