@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/phone";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { serializeBooking } from "@/lib/serialize";
-import { formatBookingNumber } from "@/lib/booking-number";
 
 export async function GET(request: NextRequest) {
   const phoneParam = request.nextUrl.searchParams.get("phone");
@@ -95,24 +93,5 @@ export async function POST(request: NextRequest) {
     include: { items: true },
   });
 
-  const shopName = process.env.SHOP_NAME || "the dry cleaner";
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-  const bookingCode = formatBookingNumber(booking.bookingNumber);
-  const sms = await sendWhatsAppMessage(
-    phoneNormalized,
-    `Hi ${customerName}, ${shopName} received ${itemCount} item(s) for cleaning (Booking #${bookingCode}). Total: ${totalAmount.toFixed(2)}. We'll text you when it's ready.`
-  );
-
-  const updated = sms.sent
-    ? await prisma.booking.update({
-        where: { id: booking.id },
-        data: { confirmationSmsSentAt: new Date() },
-        include: { items: true },
-      })
-    : booking;
-
-  return NextResponse.json(
-    { ...serializeBooking(updated), smsSent: sms.sent, smsError: sms.error },
-    { status: 201 }
-  );
+  return NextResponse.json(serializeBooking(booking), { status: 201 });
 }

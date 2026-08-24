@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { serializeBooking } from "@/lib/serialize";
-import { formatBookingNumber } from "@/lib/booking-number";
 
 export async function GET(
   _request: NextRequest,
@@ -50,32 +48,11 @@ export async function PATCH(
   if (parsed.data.status === "DELIVERED" && !existing.deliveredAt)
     data.deliveredAt = now;
 
-  let booking = await prisma.booking.update({
+  const booking = await prisma.booking.update({
     where: { id },
     data,
     include: { items: true },
   });
 
-  let smsSent: boolean | undefined;
-  let smsError: string | undefined;
-
-  if (parsed.data.status === "READY" && !existing.readySmsSentAt) {
-    const shopName = process.env.SHOP_NAME || "the dry cleaner";
-    const bookingCode = formatBookingNumber(booking.bookingNumber);
-    const sms = await sendWhatsAppMessage(
-      booking.phone,
-      `Hi ${booking.customerName}, your order at ${shopName} (Booking #${bookingCode}) is ready for pickup/delivery. Total due: ${Number(booking.totalAmount).toFixed(2)}.`
-    );
-    smsSent = sms.sent;
-    smsError = sms.error;
-    if (sms.sent) {
-      booking = await prisma.booking.update({
-        where: { id },
-        data: { readySmsSentAt: now },
-        include: { items: true },
-      });
-    }
-  }
-
-  return NextResponse.json({ ...serializeBooking(booking), smsSent, smsError });
+  return NextResponse.json(serializeBooking(booking));
 }

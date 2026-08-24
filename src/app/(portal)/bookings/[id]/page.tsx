@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import BookingActions from "./booking-actions";
+import ReceiptSheet from "./receipt-sheet";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,8 @@ export default async function BookingDetailPage({
   const shopName = process.env.SHOP_NAME || "Dry Cleaner";
 
   return (
-    <div className="space-y-4">
+    <>
+      <div className="space-y-4 print-hide-when-receipt">
       <Link
         href="/"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground print:hidden"
@@ -49,7 +51,13 @@ export default async function BookingDetailPage({
         Back
       </Link>
 
-      <BookingActions id={b.id} status={b.status} />
+      <BookingActions
+        id={b.id}
+        status={b.status}
+        customerName={b.customerName}
+        phone={b.phone}
+        bookingCode={b.bookingCode}
+      />
 
       <Card className="print:rounded-none print:p-0 print:ring-0">
         <CardHeader className="flex items-start justify-between">
@@ -133,6 +141,9 @@ export default async function BookingDetailPage({
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+
+      <ReceiptSheet booking={b} shopName={shopName} />
+    </>
   );
 }

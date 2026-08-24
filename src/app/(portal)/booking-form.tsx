@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Minus, Plus, CircleCheck, Search, X, Trash2 } from "lucide-react";
+import {
+  Minus,
+  Plus,
+  CircleCheck,
+  Search,
+  X,
+  Trash2,
+  MessageCircle,
+  Printer,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +19,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { buildWhatsAppLink } from "@/lib/whatsapp-link";
+import { openReceiptPdf, isPrintShortcut } from "@/lib/print-receipt";
 
 type PriceItem = {
   id: string;
@@ -104,7 +115,9 @@ export default function BookingForm({
   const [result, setResult] = useState<{
     id: string;
     totalAmount: number;
-    smsSent: boolean;
+    customerName: string;
+    phone: string;
+    bookingCode: string;
   } | null>(null);
 
   const visibleItems = useMemo(() => {
@@ -251,6 +264,20 @@ export default function BookingForm({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [addBundle, addOne, result, submitting, visibleBundles, visibleItems]);
 
+  // The item shortcuts above stand down once a booking is saved, which is
+  // exactly when the operator wants the receipt. P takes over on that screen.
+  // There is no receipt markup here to print, so this opens the PDF instead.
+  useEffect(() => {
+    if (!result) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (!isPrintShortcut(event)) return;
+      event.preventDefault();
+      openReceiptPdf(result!.id);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [result]);
+
   function setLineQuantity(id: string, quantity: number) {
     if (quantity <= 0) {
       removeLine(id);
@@ -302,13 +329,11 @@ export default function BookingForm({
       setResult({
         id: data.id,
         totalAmount: data.totalAmount,
-        smsSent: data.smsSent,
+        customerName: data.customerName,
+        phone: data.phone,
+        bookingCode: data.bookingCode,
       });
-      toast.success("Booking saved", {
-        description: data.smsSent
-          ? "Confirmation WhatsApp message sent to the customer."
-          : "WhatsApp message could not be sent — check Twilio settings.",
-      });
+      toast.success("Booking saved");
       setCustomerName("");
       setPhone("");
       setNotes("");
@@ -321,6 +346,10 @@ export default function BookingForm({
   }
 
   if (result) {
+    const ownerNumber = process.env.NEXT_PUBLIC_OWNER_WHATSAPP_NUMBER;
+    const ownerMessage = `New booking #${result.bookingCode}: ${result.customerName} (${result.phone}) — total ${result.totalAmount.toFixed(2)}.`;
+    const customerMessage = `Hi ${result.customerName}, we've received your order #${result.bookingCode}. Total: ${result.totalAmount.toFixed(2)}. We'll message you as soon as it's ready for pickup.`;
+
     return (
       <Alert>
         <CircleCheck />
@@ -328,14 +357,59 @@ export default function BookingForm({
           Booking saved. Total amount: {result.totalAmount.toFixed(2)}
         </AlertTitle>
         <AlertDescription>
-          {result.smsSent
-            ? "Confirmation WhatsApp message sent to the customer."
-            : "Booking saved, but the WhatsApp message could not be sent (check Twilio settings)."}
+          Booking #{result.bookingCode} for {result.customerName}.
         </AlertDescription>
-        <div className="mt-3 flex gap-2">
-          <Button size="sm" render={<a href={`/bookings/${result.id}`} />}>
+        {/* Alert lays its children out on a grid whose first column is sized
+            for the icon; only AlertTitle/Description opt into column 2, so an
+            extra child has to place itself there or it widens the icon column
+            and shoves the text across the card. */}
+        <div className="col-start-2 mt-3 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            render={
+              <a
+                href={buildWhatsAppLink(result.phone, customerMessage)}
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            }
+          >
+            <MessageCircle />
+            Message Customer on WhatsApp
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => openReceiptPdf(result.id)}
+          >
+            <Printer />
+            Print{" "}
+            <kbd className="ml-0.5 rounded border px-1 font-mono text-[0.7em]">
+              P
+            </kbd>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            render={<a href={`/bookings/${result.id}`} />}
+          >
             View receipt
           </Button>
+          {ownerNumber && (
+            <Button
+              size="sm"
+              variant="outline"
+              render={
+                <a
+                  href={buildWhatsAppLink(ownerNumber, ownerMessage)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
+            >
+              Notify Owner on WhatsApp
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => setResult(null)}>
             New booking
           </Button>

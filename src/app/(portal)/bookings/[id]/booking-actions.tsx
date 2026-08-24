@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Printer, Download } from "lucide-react";
+import { Printer, Download, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { statusLabel } from "@/lib/status";
+import { printReceiptSheet, isPrintShortcut } from "@/lib/print-receipt";
+import { buildWhatsAppLink } from "@/lib/whatsapp-link";
 
 type Status = "RECEIVED" | "READY" | "DELIVERED";
 
@@ -22,13 +24,30 @@ const STATUSES: Status[] = ["RECEIVED", "READY", "DELIVERED"];
 export default function BookingActions({
   id,
   status,
+  customerName,
+  phone,
+  bookingCode,
 }: {
   id: string;
   status: Status;
+  customerName: string;
+  phone: string;
+  bookingCode: string;
 }) {
   const router = useRouter();
   const [current, setCurrent] = useState<Status>(status);
   const [loading, setLoading] = useState(false);
+
+  // P prints the 80mm receipt sheet rendered alongside this page.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (!isPrintShortcut(event)) return;
+      event.preventDefault();
+      printReceiptSheet();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   async function changeStatus(next: Status) {
     if (next === current) return;
@@ -45,15 +64,11 @@ export default function BookingActions({
         return;
       }
       setCurrent(next);
-      if (next === "READY") {
-        if (data.smsSent) {
-          toast.success("Marked ready and WhatsApp message sent to customer.");
-        } else {
-          toast.warning("Marked ready, but WhatsApp message could not be sent.");
-        }
-      } else {
-        toast.success(`Status set to ${statusLabel[next]}.`);
-      }
+      toast.success(
+        next === "READY"
+          ? "Marked ready — tap below to message the customer."
+          : `Status set to ${statusLabel[next]}.`
+      );
       router.refresh();
     } finally {
       setLoading(false);
@@ -83,18 +98,29 @@ export default function BookingActions({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="outline"
-          render={
-            <a
-              href={`/api/bookings/${id}/pdf?inline=1`}
-              target="_blank"
-              rel="noopener noreferrer"
-            />
-          }
-        >
+        {current === "READY" && (
+          <Button
+            render={
+              <a
+                href={buildWhatsAppLink(
+                  phone,
+                  `Hi ${customerName}, your order #${bookingCode} is ready for pickup! Please visit us at your convenience.`
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            }
+          >
+            <MessageCircle />
+            Message Customer on WhatsApp
+          </Button>
+        )}
+        <Button variant="outline" onClick={printReceiptSheet}>
           <Printer />
-          Print Receipt
+          Print Receipt{" "}
+          <kbd className="ml-0.5 rounded border px-1 font-mono text-[0.7em]">
+            P
+          </kbd>
         </Button>
         <Button variant="outline" render={<a href={`/api/bookings/${id}/pdf`} />}>
           <Download />

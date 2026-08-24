@@ -67,8 +67,8 @@ export default async function DashboardPage() {
           <CardTitle>New Booking</CardTitle>
           <CardDescription>
             Enter the customer&apos;s clothes and phone number. The total is
-            calculated automatically and a confirmation WhatsApp message is
-            sent.
+            calculated automatically, and you can send the confirmation over
+            WhatsApp once the booking is saved.
           </CardDescription>
         </CardHeader>
         <CardContent>

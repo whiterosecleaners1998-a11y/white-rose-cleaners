@@ -5,6 +5,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-brand-ember: var(--brand-ember);
+  --color-brand-orange: var(--brand-orange);
+  --color-brand-amber: var(--brand-amber);
+  --color-brand-ink: var(--brand-ink);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
@@ -55,75 +59,107 @@
   body {
     background: #ffffff;
   }
+
+  /* The booking page carries a hidden 80mm receipt (#receipt-sheet). When one
+     is present it is the only thing that should reach the paper — otherwise the
+     printer gets the web page, browser headers and all. Everything else is
+     collapsed rather than merely hidden, so no blank trailing sheet is fed. */
+  body:has(#receipt-sheet) .print-hide-when-receipt {
+    display: none !important;
+  }
+  /* Brought back from its off-screen parking spot (see receipt-sheet.tsx) and
+     centred on the 80mm page. */
+  #receipt-sheet {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    margin: 0 auto !important;
+  }
 }
 
+/* Brand palette sampled from the White Rose logo: pure-black wordmark under a
+   swoosh that runs #F64830 (ember) -> #F97B33 (orange) -> #FDB23F (amber).
+   Orange carries the brand, so it is --primary; its foreground is near-black
+   rather than white because white on #F97B33 is only 2.66:1 (fails AA) while
+   black is 6.98:1 — and black-on-orange is what the logo itself does. */
 :root {
-  --background: #faf3ea;
-  --foreground: oklch(0.145 0 0);
+  --brand-ember: #f64830;
+  --brand-orange: #f97b33;
+  --brand-amber: #fdb23f;
+  --brand-ink: #0c0a09;
+
+  --background: #fbfaf9;
+  --foreground: #0c0a09;
   --card: #ffffff;
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: #0c0a09;
   --popover: #ffffff;
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: #583101;
-  --primary-foreground: #e7bc91;
-  --secondary: #f1e1c8;
-  --secondary-foreground: #583101;
-  --muted: #f1e1c8;
-  --muted-foreground: #8a6a45;
-  --accent: #f1e1c8;
-  --accent-foreground: #583101;
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: #e8d2ae;
-  --input: #e8d2ae;
-  --ring: #583101;
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --popover-foreground: #0c0a09;
+  --primary: #f97b33;
+  --primary-foreground: #1a1206;
+  --secondary: #fff1e6;
+  --secondary-foreground: #9a3412;
+  --muted: #f5f4f2;
+  --muted-foreground: #6b6560;
+  --accent: #fff1e6;
+  --accent-foreground: #9a3412;
+  /* Kept a cool, darker red so destructive never reads as the brand orange. */
+  --destructive: #c81e1e;
+  --border: #e9e5e1;
+  --input: #e9e5e1;
+  --ring: #f97b33;
+  --chart-1: #f64830;
+  --chart-2: #f97b33;
+  --chart-3: #fdb23f;
+  --chart-4: #9a3412;
+  --chart-5: #0c0a09;
   --radius: 0.625rem;
-  --sidebar: #faf3ea;
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #583101;
-  --sidebar-primary-foreground: #e7bc91;
-  --sidebar-accent: #f1e1c8;
-  --sidebar-accent-foreground: #583101;
-  --sidebar-border: #e8d2ae;
-  --sidebar-ring: #583101;
+  --sidebar: #fbfaf9;
+  --sidebar-foreground: #0c0a09;
+  --sidebar-primary: #f97b33;
+  --sidebar-primary-foreground: #1a1206;
+  --sidebar-accent: #fff1e6;
+  --sidebar-accent-foreground: #9a3412;
+  --sidebar-border: #e9e5e1;
+  --sidebar-ring: #f97b33;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: #e7bc91;
-  --primary-foreground: #583101;
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: #e7bc91;
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: #e7bc91;
-  --sidebar-primary-foreground: #583101;
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: #e7bc91;
+  --brand-ember: #f64830;
+  --brand-orange: #f97b33;
+  --brand-amber: #fdb23f;
+  --brand-ink: #faf9f8;
+
+  --background: #0c0a09;
+  --foreground: #faf9f8;
+  --card: #17130f;
+  --card-foreground: #faf9f8;
+  --popover: #17130f;
+  --popover-foreground: #faf9f8;
+  --primary: #f97b33;
+  --primary-foreground: #1a1206;
+  --secondary: #2a211a;
+  --secondary-foreground: #ffd9be;
+  --muted: #221c17;
+  --muted-foreground: #a8a29e;
+  --accent: #2a211a;
+  --accent-foreground: #ffd9be;
+  --destructive: #f87171;
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: #f97b33;
+  --chart-1: #f64830;
+  --chart-2: #f97b33;
+  --chart-3: #fdb23f;
+  --chart-4: #ffd9be;
+  --chart-5: #faf9f8;
+  --sidebar: #17130f;
+  --sidebar-foreground: #faf9f8;
+  --sidebar-primary: #f97b33;
+  --sidebar-primary-foreground: #1a1206;
+  --sidebar-accent: #2a211a;
+  --sidebar-accent-foreground: #ffd9be;
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: #f97b33;
 }
 
 @layer base {

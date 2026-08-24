@@ -17,10 +17,10 @@ export default function PortalLayout({
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
           <Link href="/" className="flex min-w-0 items-center gap-2">
             <Image
-              src="/logo.png"
+              src="/white-rose-logo.png"
               alt={shopName}
-              width={800}
-              height={595}
+              width={377}
+              height={362}
               className="h-11 w-auto shrink-0"
               priority
             />
@@ -52,7 +52,7 @@ export default function PortalLayout({
       </main>
       <footer className="border-t bg-card py-4 print:hidden">
         <p className="text-center text-xs text-muted-foreground">
-          Designed and Developed By Nexivostudio.io
+          System by NexivoStudio.io
         </p>
       </footer>
     </div>

@@ -59,10 +59,10 @@ function LoginForm() {
     <Card className="w-full max-w-sm">
       <CardHeader>
         <Image
-          src="/logo.png"
-          alt="White Rose Drycleaners"
-          width={800}
-          height={595}
+          src="/white-rose-logo.png"
+          alt="White Rose Cleaner"
+          width={377}
+          height={362}
           className="mx-auto mb-1 h-24 w-auto"
           priority
         />
@@ -110,9 +110,16 @@ export default function LoginPage() {
           <LoginForm />
         </Suspense>
       </main>
-      <footer className="py-4">
+      <footer className="flex flex-col items-center gap-1.5 py-5">
+        <Image
+          src="/nexivo-studio.png"
+          alt="Nexivo Studio"
+          width={381}
+          height={210}
+          className="h-6 w-auto opacity-80"
+        />
         <p className="text-center text-xs text-muted-foreground">
-          Designed and Developed By Nexivostudio.io
+          System by NexivoStudio.io
         </p>
       </footer>
     </div>
