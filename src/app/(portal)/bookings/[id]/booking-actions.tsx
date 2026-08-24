@@ -27,12 +27,14 @@ export default function BookingActions({
   customerName,
   phone,
   bookingCode,
+  shopName,
 }: {
   id: string;
   status: Status;
   customerName: string;
   phone: string;
   bookingCode: string;
+  shopName: string;
 }) {
   const router = useRouter();
   const [current, setCurrent] = useState<Status>(status);
@@ -104,7 +106,9 @@ export default function BookingActions({
               <a
                 href={buildWhatsAppLink(
                   phone,
-                  `Hi ${customerName}, your order #${bookingCode} is ready for pickup! Please visit us at your convenience.`
+                  // Roman Urdu, signed: the link sends from the staff member's
+                  // own WhatsApp, so the customer sees an unfamiliar number.
+                  `Assalam-o-Alaikum ${customerName}, aap ka order #${bookingCode} taiyar hai. Aap kisi bhi waqt tashreef la kar le ja sakte hain. Shukriya! - ${shopName}`
                 )}
                 target="_blank"
                 rel="noopener noreferrer"

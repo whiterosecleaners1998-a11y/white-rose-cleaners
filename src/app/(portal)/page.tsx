@@ -83,7 +83,11 @@ export default async function DashboardPage() {
               </AlertDescription>
             </Alert>
           ) : (
-            <BookingForm priceList={priceList} bundles={bundles} />
+            <BookingForm
+              priceList={priceList}
+              bundles={bundles}
+              shopName={process.env.SHOP_NAME || "Dry Cleaner"}
+            />
           )}
         </CardContent>
       </Card>

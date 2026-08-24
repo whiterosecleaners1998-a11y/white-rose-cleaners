@@ -99,9 +99,11 @@ function EmptyPane({
 export default function BookingForm({
   priceList,
   bundles = [],
+  shopName,
 }: {
   priceList: PriceItem[];
   bundles?: Bundle[];
+  shopName: string;
 }) {
   const router = useRouter();
   const [customerName, setCustomerName] = useState("");
@@ -347,8 +349,11 @@ export default function BookingForm({
 
   if (result) {
     const ownerNumber = process.env.NEXT_PUBLIC_OWNER_WHATSAPP_NUMBER;
-    const ownerMessage = `New booking #${result.bookingCode}: ${result.customerName} (${result.phone}) — total ${result.totalAmount.toFixed(2)}.`;
-    const customerMessage = `Hi ${result.customerName}, we've received your order #${result.bookingCode}. Total: ${result.totalAmount.toFixed(2)}. We'll message you as soon as it's ready for pickup.`;
+    // Goes to the owner, not a customer, so it stays terse.
+    const ownerMessage = `Nayi booking #${result.bookingCode}: ${result.customerName} (${result.phone}) - total Rs. ${result.totalAmount.toFixed(2)}`;
+    // Roman Urdu, and signed with the shop name: the link opens the staff
+    // member's own WhatsApp, so the customer sees an unfamiliar number.
+    const customerMessage = `Assalam-o-Alaikum ${result.customerName}, aap ka order #${result.bookingCode} hamein mil gaya hai. Total: Rs. ${result.totalAmount.toFixed(2)}. Kapre taiyar hote hi hum aap ko message kar denge. Shukriya! - ${shopName}`;
 
     return (
       <Alert>

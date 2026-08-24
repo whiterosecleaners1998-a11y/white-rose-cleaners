@@ -57,6 +57,7 @@ export default async function BookingDetailPage({
         customerName={b.customerName}
         phone={b.phone}
         bookingCode={b.bookingCode}
+        shopName={shopName}
       />
 
       <Card className="print:rounded-none print:p-0 print:ring-0">
