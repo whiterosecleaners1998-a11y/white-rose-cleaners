@@ -1,8 +1,15 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
 import LogoutButton from "./logout-button";
 import MobileNav from "./mobile-nav";
+import SidebarNav from "./sidebar-nav";
+import SidebarToggle, { SIDEBAR_STORAGE_KEY } from "./sidebar-toggle";
+
+// Runs before first paint so a collapsed sidebar renders collapsed, rather than
+// opening wide and snapping shut once React hydrates.
+const RESTORE_SIDEBAR = `try{document.documentElement.dataset.sidebar=localStorage.getItem(${JSON.stringify(
+  SIDEBAR_STORAGE_KEY
+)})==="1"?"collapsed":"expanded"}catch(e){}`;
 
 export default function PortalLayout({
   children,
@@ -12,49 +19,76 @@ export default function PortalLayout({
   const shopName = process.env.SHOP_NAME || "Dry Cleaner Portal";
 
   return (
-    <div className="flex min-h-screen flex-col bg-muted/30">
-      <header className="border-b bg-card print:hidden">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
+    <div className="min-h-screen bg-muted/40">
+      <script dangerouslySetInnerHTML={{ __html: RESTORE_SIDEBAR }} />
+
+      {/* Fixed so the order table scrolls under it rather than pushing it away.
+          Below lg it gives way to the sheet in MobileNav. */}
+      <aside className="app-sidebar fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r bg-card lg:flex print:hidden">
+        {/* Collapsed, the rail is too narrow for both logo and toggle, so the
+            brand folds away and the toggle centres in its place. */}
+        <div className="sidebar-brand flex items-center gap-2.5 border-b px-3 py-4">
+          <Link
+            href="/"
+            className="sidebar-label flex min-w-0 items-center gap-2.5"
+          >
+            <Image
+              src="/white-rose-logo.png"
+              alt=""
+              width={377}
+              height={362}
+              className="size-9 shrink-0 object-contain"
+              priority
+            />
+            <span className="min-w-0">
+              <span className="block truncate text-sm leading-tight font-semibold">
+                {shopName}
+              </span>
+              <span className="block truncate text-xs text-muted-foreground">
+                Since 1998
+              </span>
+            </span>
+          </Link>
+          <div className="ml-auto">
+            <SidebarToggle />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-3 py-4">
+          <SidebarNav />
+        </div>
+
+        <div className="sidebar-foot flex items-center border-t p-3">
+          <LogoutButton />
+        </div>
+      </aside>
+
+      <div className="app-content flex min-h-screen flex-col lg:pl-60">
+        {/* Only small screens need a top bar; on lg the sidebar is the nav. */}
+        <header className="flex items-center justify-between border-b bg-card px-4 py-2.5 lg:hidden print:hidden">
           <Link href="/" className="flex min-w-0 items-center gap-2">
             <Image
               src="/white-rose-logo.png"
               alt={shopName}
               width={377}
               height={362}
-              className="h-11 w-auto shrink-0"
+              className="h-9 w-auto shrink-0"
               priority
             />
           </Link>
-          <nav className="hidden items-center gap-1 sm:flex">
-            <Button variant="ghost" size="sm" render={<Link href="/" />}>
-              New Booking
-            </Button>
-            <Button variant="ghost" size="sm" render={<Link href="/search" />}>
-              Find by Phone
-            </Button>
-            <Button variant="ghost" size="sm" render={<Link href="/orders" />}>
-              Orders
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              render={<Link href="/settings/prices" />}
-            >
-              Price List
-            </Button>
-            <LogoutButton />
-          </nav>
           <MobileNav />
-        </div>
-      </header>
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-6">
-        {children}
-      </main>
-      <footer className="border-t bg-card py-4 print:hidden">
-        <p className="text-center text-xs text-muted-foreground">
-          System by NexivoStudio.io
-        </p>
-      </footer>
+        </header>
+
+        <main className="w-full flex-1 px-4 py-5 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-6xl">{children}</div>
+        </main>
+
+        <footer className="px-4 py-5 print:hidden">
+          <p className="text-center text-xs text-muted-foreground">
+            System by NexivoStudio.io
+          </p>
+        </footer>
+      </div>
     </div>
   );
 }

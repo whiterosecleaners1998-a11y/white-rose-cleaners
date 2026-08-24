@@ -14,9 +14,15 @@ export default function LogoutButton() {
   }
 
   return (
-    <Button variant="ghost" size="sm" onClick={handleLogout}>
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={handleLogout}
+      title="Log out"
+      className="w-full justify-start"
+    >
       <LogOut />
-      Log out
+      <span className="sidebar-label">Log out</span>
     </Button>
   );
 }

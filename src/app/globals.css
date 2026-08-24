@@ -174,3 +174,43 @@
     font-size: 17.5px;
   }
 }
+
+/* Sidebar collapse. The widths live here rather than in the component so the
+   toggle only has to flip one attribute on <html> — the shell stays a server
+   component, and the pre-paint script can restore the choice with no flash. */
+.app-sidebar,
+.app-content {
+  transition:
+    width 150ms ease,
+    padding-left 150ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar,
+  .app-content {
+    transition: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root[data-sidebar="collapsed"] .app-sidebar {
+    width: 3.75rem;
+  }
+  :root[data-sidebar="collapsed"] .app-content {
+    padding-left: 3.75rem;
+  }
+  /* Labels and group headings fold away; the icons carry the meaning, with
+     the full name kept in a title attribute for hover. */
+  :root[data-sidebar="collapsed"] .sidebar-label {
+    display: none;
+  }
+  :root[data-sidebar="collapsed"] .sidebar-nav-link,
+  :root[data-sidebar="collapsed"] .sidebar-brand,
+  :root[data-sidebar="collapsed"] .sidebar-foot,
+  /* the logout button itself, which is full-width and left-aligned expanded */
+  :root[data-sidebar="collapsed"] .sidebar-foot > * {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}

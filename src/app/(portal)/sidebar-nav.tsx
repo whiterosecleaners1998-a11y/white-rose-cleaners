@@ -40,7 +40,7 @@ export default function SidebarNav({
     <nav className="flex flex-col gap-5">
       {NAV_GROUPS.map((group) => (
         <div key={group.heading} className="grid gap-1">
-          <p className="px-3 pb-1 text-[0.68rem] font-medium tracking-wider text-muted-foreground uppercase">
+          <p className="sidebar-label px-3 pb-1 text-[0.68rem] font-medium tracking-wider text-muted-foreground uppercase">
             {group.heading}
           </p>
           {group.items.map((item) => {
@@ -54,15 +54,17 @@ export default function SidebarNav({
                 href={item.href}
                 onClick={onNavigate}
                 aria-current={active ? "page" : undefined}
+                // Shown on hover once the rail is collapsed to icons.
+                title={item.label}
                 className={cn(
-                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
+                  "sidebar-nav-link flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
                   active
                     ? "bg-secondary font-medium text-secondary-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
                 <Icon className="size-4 shrink-0" />
-                {item.label}
+                <span className="sidebar-label">{item.label}</span>
               </Link>
             );
           })}
