@@ -57,6 +57,7 @@ export default async function BookingDetailPage({
         customerName={b.customerName}
         phone={b.phone}
         bookingCode={b.bookingCode}
+        totalAmount={b.totalAmount}
         shopName={shopName}
       />
 

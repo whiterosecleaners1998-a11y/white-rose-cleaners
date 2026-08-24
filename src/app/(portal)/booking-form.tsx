@@ -20,6 +20,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buildWhatsAppLink } from "@/lib/whatsapp-link";
+import {
+  orderReceivedMessage,
+  ownerNewBookingMessage,
+} from "@/lib/whatsapp-messages";
 import { openReceiptPdf, isPrintShortcut } from "@/lib/print-receipt";
 
 type PriceItem = {
@@ -349,11 +353,8 @@ export default function BookingForm({
 
   if (result) {
     const ownerNumber = process.env.NEXT_PUBLIC_OWNER_WHATSAPP_NUMBER;
-    // Goes to the owner, not a customer, so it stays terse.
-    const ownerMessage = `Nayi booking #${result.bookingCode}: ${result.customerName} (${result.phone}) - total Rs. ${result.totalAmount.toFixed(2)}`;
-    // Roman Urdu, and signed with the shop name: the link opens the staff
-    // member's own WhatsApp, so the customer sees an unfamiliar number.
-    const customerMessage = `Assalam-o-Alaikum ${result.customerName}, aap ka order #${result.bookingCode} hamein mil gaya hai. Total: Rs. ${result.totalAmount.toFixed(2)}. Kapre taiyar hote hi hum aap ko message kar denge. Shukriya! - ${shopName}`;
+    const ownerMessage = ownerNewBookingMessage(result);
+    const customerMessage = orderReceivedMessage({ ...result, shopName });
 
     return (
       <Alert>

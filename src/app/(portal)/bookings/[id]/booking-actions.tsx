@@ -16,6 +16,10 @@ import {
 import { statusLabel } from "@/lib/status";
 import { printReceiptSheet, isPrintShortcut } from "@/lib/print-receipt";
 import { buildWhatsAppLink } from "@/lib/whatsapp-link";
+import {
+  orderReceivedMessage,
+  orderReadyMessage,
+} from "@/lib/whatsapp-messages";
 
 type Status = "RECEIVED" | "READY" | "DELIVERED";
 
@@ -27,6 +31,7 @@ export default function BookingActions({
   customerName,
   phone,
   bookingCode,
+  totalAmount,
   shopName,
 }: {
   id: string;
@@ -34,6 +39,7 @@ export default function BookingActions({
   customerName: string;
   phone: string;
   bookingCode: string;
+  totalAmount: number;
   shopName: string;
 }) {
   const router = useRouter();
@@ -50,6 +56,20 @@ export default function BookingActions({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  // Which message fits depends on where the order is. Delivered orders get
+  // none — there is nothing left to tell the customer.
+  const customerMessage =
+    current === "RECEIVED"
+      ? orderReceivedMessage({
+          customerName,
+          bookingCode,
+          totalAmount,
+          shopName,
+        })
+      : current === "READY"
+        ? orderReadyMessage({ customerName, bookingCode, shopName })
+        : null;
 
   async function changeStatus(next: Status) {
     if (next === current) return;
@@ -100,23 +120,18 @@ export default function BookingActions({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        {current === "READY" && (
+        {customerMessage && (
           <Button
             render={
               <a
-                href={buildWhatsAppLink(
-                  phone,
-                  // Roman Urdu, signed: the link sends from the staff member's
-                  // own WhatsApp, so the customer sees an unfamiliar number.
-                  `Assalam-o-Alaikum ${customerName}, aap ka order #${bookingCode} taiyar hai. Aap kisi bhi waqt tashreef la kar le ja sakte hain. Shukriya! - ${shopName}`
-                )}
+                href={buildWhatsAppLink(phone, customerMessage)}
                 target="_blank"
                 rel="noopener noreferrer"
               />
             }
           >
             <MessageCircle />
-            Message Customer on WhatsApp
+            {current === "READY" ? "Send Ready Message" : "Send Received Message"}
           </Button>
         )}
         <Button variant="outline" onClick={printReceiptSheet}>
