@@ -1,0 +1,210 @@
+diff --git a/.env.example b/.env.example
+index ce50dad..de34df8 100644
+--- a/.env.example
++++ b/.env.example
+@@ -16,3 +16,8 @@ DEFAULT_COUNTRY_CODE="92"
+ TWILIO_ACCOUNT_SID=""
+ TWILIO_AUTH_TOKEN=""
+ TWILIO_WHATSAPP_NUMBER=""
++# Shop owner's WhatsApp number (intl format, e.g. +923001234567).
++# Powers the one-click "Notify Owner" button (booking form) and
++# "Message Customer" button (status page) — plain wa.me links,
++# no Twilio/Meta setup needed.
++NEXT_PUBLIC_OWNER_WHATSAPP_NUMBER=""
+diff --git a/src/app/(portal)/booking-form.tsx b/src/app/(portal)/booking-form.tsx
+index cac0890..9965175 100644
+--- a/src/app/(portal)/booking-form.tsx
++++ b/src/app/(portal)/booking-form.tsx
+@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
+ import { Textarea } from "@/components/ui/textarea";
+ import { Separator } from "@/components/ui/separator";
+ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
++import { buildWhatsAppLink } from "@/lib/whatsapp-link";
+ 
+ type PriceItem = {
+   id: string;
+@@ -105,6 +106,9 @@ export default function BookingForm({
+     id: string;
+     totalAmount: number;
+     smsSent: boolean;
++    customerName: string;
++    phone: string;
++    bookingCode: string;
+   } | null>(null);
+ 
+   const visibleItems = useMemo(() => {
+@@ -303,12 +307,11 @@ export default function BookingForm({
+         id: data.id,
+         totalAmount: data.totalAmount,
+         smsSent: data.smsSent,
++        customerName: data.customerName,
++        phone: data.phone,
++        bookingCode: data.bookingCode,
+       });
+-      toast.success("Booking saved", {
+-        description: data.smsSent
+-          ? "Confirmation WhatsApp message sent to the customer."
+-          : "WhatsApp message could not be sent — check Twilio settings.",
+-      });
++      toast.success("Booking saved");
+       setCustomerName("");
+       setPhone("");
+       setNotes("");
+@@ -321,6 +324,9 @@ export default function BookingForm({
+   }
+ 
+   if (result) {
++    const ownerNumber = process.env.NEXT_PUBLIC_OWNER_WHATSAPP_NUMBER;
++    const ownerMessage = `New booking #${result.bookingCode}: ${result.customerName} (${result.phone}) — total ${result.totalAmount.toFixed(2)}.`;
++
+     return (
+       <Alert>
+         <CircleCheck />
+@@ -328,14 +334,27 @@ export default function BookingForm({
+           Booking saved. Total amount: {result.totalAmount.toFixed(2)}
+         </AlertTitle>
+         <AlertDescription>
+-          {result.smsSent
+-            ? "Confirmation WhatsApp message sent to the customer."
+-            : "Booking saved, but the WhatsApp message could not be sent (check Twilio settings)."}
++          Booking #{result.bookingCode} for {result.customerName}.
+         </AlertDescription>
+-        <div className="mt-3 flex gap-2">
++        <div className="mt-3 flex flex-wrap gap-2">
+           <Button size="sm" render={<a href={`/bookings/${result.id}`} />}>
+             View receipt
+           </Button>
++          {ownerNumber && (
++            <Button
++              size="sm"
++              variant="outline"
++              render={
++                <a
++                  href={buildWhatsAppLink(ownerNumber, ownerMessage)}
++                  target="_blank"
++                  rel="noopener noreferrer"
++                />
++              }
++            >
++              Notify Owner on WhatsApp
++            </Button>
++          )}
+           <Button variant="outline" size="sm" onClick={() => setResult(null)}>
+             New booking
+           </Button>
+diff --git a/src/app/(portal)/bookings/[id]/booking-actions.tsx b/src/app/(portal)/bookings/[id]/booking-actions.tsx
+index d4d01b7..3e3bc9d 100644
+--- a/src/app/(portal)/bookings/[id]/booking-actions.tsx
++++ b/src/app/(portal)/bookings/[id]/booking-actions.tsx
+@@ -2,7 +2,7 @@
+ 
+ import { useState } from "react";
+ import { useRouter } from "next/navigation";
+-import { Printer, Download } from "lucide-react";
++import { Printer, Download, MessageCircle } from "lucide-react";
+ import { toast } from "sonner";
+ import { Button } from "@/components/ui/button";
+ import { Label } from "@/components/ui/label";
+@@ -14,6 +14,7 @@ import {
+   SelectValue,
+ } from "@/components/ui/select";
+ import { statusLabel } from "@/lib/status";
++import { buildWhatsAppLink } from "@/lib/whatsapp-link";
+ 
+ type Status = "RECEIVED" | "READY" | "DELIVERED";
+ 
+@@ -22,9 +23,15 @@ const STATUSES: Status[] = ["RECEIVED", "READY", "DELIVERED"];
+ export default function BookingActions({
+   id,
+   status,
++  customerName,
++  phone,
++  bookingCode,
+ }: {
+   id: string;
+   status: Status;
++  customerName: string;
++  phone: string;
++  bookingCode: string;
+ }) {
+   const router = useRouter();
+   const [current, setCurrent] = useState<Status>(status);
+@@ -45,15 +52,11 @@ export default function BookingActions({
+         return;
+       }
+       setCurrent(next);
+-      if (next === "READY") {
+-        if (data.smsSent) {
+-          toast.success("Marked ready and WhatsApp message sent to customer.");
+-        } else {
+-          toast.warning("Marked ready, but WhatsApp message could not be sent.");
+-        }
+-      } else {
+-        toast.success(`Status set to ${statusLabel[next]}.`);
+-      }
++      toast.success(
++        next === "READY"
++          ? "Marked ready — tap below to message the customer."
++          : `Status set to ${statusLabel[next]}.`
++      );
+       router.refresh();
+     } finally {
+       setLoading(false);
+@@ -83,6 +86,23 @@ export default function BookingActions({
+       </div>
+ 
+       <div className="flex flex-wrap items-center gap-2">
++        {current === "READY" && (
++          <Button
++            render={
++              <a
++                href={buildWhatsAppLink(
++                  phone,
++                  `Hi ${customerName}, your order #${bookingCode} is ready for pickup! Please visit us at your convenience.`
++                )}
++                target="_blank"
++                rel="noopener noreferrer"
++              />
++            }
++          >
++            <MessageCircle />
++            Message Customer on WhatsApp
++          </Button>
++        )}
+         <Button
+           variant="outline"
+           render={
+diff --git a/src/app/(portal)/bookings/[id]/page.tsx b/src/app/(portal)/bookings/[id]/page.tsx
+index 7f11cd0..c7042de 100644
+--- a/src/app/(portal)/bookings/[id]/page.tsx
++++ b/src/app/(portal)/bookings/[id]/page.tsx
+@@ -49,7 +49,13 @@ export default async function BookingDetailPage({
+         Back
+       </Link>
+ 
+-      <BookingActions id={b.id} status={b.status} />
++      <BookingActions
++        id={b.id}
++        status={b.status}
++        customerName={b.customerName}
++        phone={b.phone}
++        bookingCode={b.bookingCode}
++      />
+ 
+       <Card className="print:rounded-none print:p-0 print:ring-0">
+         <CardHeader className="flex items-start justify-between">
+diff --git a/src/lib/whatsapp-link.ts b/src/lib/whatsapp-link.ts
+new file mode 100644
+index 0000000..191b60a
+--- /dev/null
++++ b/src/lib/whatsapp-link.ts
+@@ -0,0 +1,9 @@
++/**
++ * Builds a wa.me click-to-chat link with a pre-filled message.
++ * Opening this link launches WhatsApp with the message already typed —
++ * the person still has to tap Send themselves. No API, no setup.
++ */
++export function buildWhatsAppLink(phone: string, message: string): string {
++  const digits = phone.replace(/\D/g, ""); // wa.me wants digits only, no + or spaces
++  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
++}
