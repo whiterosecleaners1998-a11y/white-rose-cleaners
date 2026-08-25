@@ -160,7 +160,7 @@ export default function BookingActions({
           onValueChange={(value) => changeStatus(value as Status)}
           disabled={loading}
         >
-          <SelectTrigger size="sm">
+          <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -177,6 +177,9 @@ export default function BookingActions({
         <Label className="text-sm text-muted-foreground" htmlFor="paid-amount">
           Paid
         </Label>
+        {/* The base Input is h-10 with a larger type scale, built for form
+            fields rather than a toolbar; bring it down to the button height so
+            it lines up with the select and the buttons beside it. */}
         <Input
           id="paid-amount"
           type="number"
@@ -187,14 +190,13 @@ export default function BookingActions({
           value={paidInput}
           onChange={(event) => setPaidInput(event.target.value)}
           disabled={savingPayment}
-          className="h-8 w-24 tabular-nums"
+          className="h-8 w-24 px-2.5 text-sm tabular-nums"
         />
         <span className="text-sm tabular-nums text-muted-foreground">
           of {totalAmount.toFixed(2)}
         </span>
         {paidChanged && (
           <Button
-            size="sm"
             variant="outline"
             onClick={() => savePayment(typedPaid)}
             disabled={savingPayment}
@@ -209,7 +211,6 @@ export default function BookingActions({
                 disagree about what is about to be saved. */}
             {!paidChanged && (
               <Button
-                size="sm"
                 variant="outline"
                 onClick={() => savePayment(totalAmount)}
                 disabled={savingPayment}
@@ -269,7 +270,7 @@ function PaymentPill({
       : "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-400";
   return (
     <span
-      className={`rounded-full px-2.5 py-1 text-xs font-medium tabular-nums ${tint}`}
+      className={`inline-flex h-8 items-center rounded-full px-3 text-xs font-medium tabular-nums ${tint}`}
     >
       {children}
     </span>
