@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Afacad, Geist_Mono } from "next/font/google";
 import { RESTORE_SIDEBAR_SCRIPT } from "@/lib/sidebar";
+import InlineScript from "@/components/inline-script";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -37,11 +38,11 @@ export default function RootLayout({
       className={`${afacad.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
-        {/* Raw, inline, and in the head on purpose. next/script's
-            beforeInteractive queues into __next_s and runs after paint, too
-            late to stop the sidebar opening wide and snapping shut; this runs
-            as the parser reaches it, before any of the shell is painted. */}
-        <script dangerouslySetInnerHTML={{ __html: RESTORE_SIDEBAR_SCRIPT }} />
+        {/* Inline rather than next/script: beforeInteractive queues into
+            __next_s and runs after paint, too late to stop the sidebar opening
+            wide and snapping shut. In the head it runs before any of the shell
+            is parsed. */}
+        <InlineScript html={RESTORE_SIDEBAR_SCRIPT} />
       </head>
       <body className="min-h-full flex flex-col">
         {children}
