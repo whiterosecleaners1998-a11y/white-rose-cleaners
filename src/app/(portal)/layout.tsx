@@ -3,13 +3,7 @@ import Image from "next/image";
 import LogoutButton from "./logout-button";
 import MobileNav from "./mobile-nav";
 import SidebarNav from "./sidebar-nav";
-import SidebarToggle, { SIDEBAR_STORAGE_KEY } from "./sidebar-toggle";
-
-// Runs before first paint so a collapsed sidebar renders collapsed, rather than
-// opening wide and snapping shut once React hydrates.
-const RESTORE_SIDEBAR = `try{document.documentElement.dataset.sidebar=localStorage.getItem(${JSON.stringify(
-  SIDEBAR_STORAGE_KEY
-)})==="1"?"collapsed":"expanded"}catch(e){}`;
+import SidebarToggle from "./sidebar-toggle";
 
 export default function PortalLayout({
   children,
@@ -20,8 +14,6 @@ export default function PortalLayout({
 
   return (
     <div className="min-h-screen bg-muted/40">
-      <script dangerouslySetInnerHTML={{ __html: RESTORE_SIDEBAR }} />
-
       {/* Fixed so the order table scrolls under it rather than pushing it away.
           Below lg it gives way to the sheet in MobileNav. */}
       <aside className="app-sidebar fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r bg-card lg:flex print:hidden">
