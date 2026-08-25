@@ -33,6 +33,7 @@ export default function BookingActions({
   bookingCode,
   totalAmount,
   shopName,
+  receiptUrl,
 }: {
   id: string;
   status: Status;
@@ -41,6 +42,7 @@ export default function BookingActions({
   bookingCode: string;
   totalAmount: number;
   shopName: string;
+  receiptUrl: string;
 }) {
   const router = useRouter();
   const [current, setCurrent] = useState<Status>(status);
@@ -66,9 +68,15 @@ export default function BookingActions({
           bookingCode,
           totalAmount,
           shopName,
+          receiptUrl,
         })
       : current === "READY"
-        ? orderReadyMessage({ customerName, bookingCode, shopName })
+        ? orderReadyMessage({
+            customerName,
+            bookingCode,
+            shopName,
+            receiptUrl,
+          })
         : null;
 
   async function changeStatus(next: Status) {

@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/phone";
 import { serializeBooking } from "@/lib/serialize";
+import { originFromHeaders } from "@/lib/origin";
+import { buildReceiptUrl } from "@/lib/receipt-link";
 
 export async function GET(request: NextRequest) {
   const phoneParam = request.nextUrl.searchParams.get("phone");
@@ -93,5 +95,14 @@ export async function POST(request: NextRequest) {
     include: { items: true },
   });
 
-  return NextResponse.json(serializeBooking(booking), { status: 201 });
+  const created = serializeBooking(booking);
+  // Handed back so the save screen can put the receipt straight into the
+  // WhatsApp message without a second round trip.
+  return NextResponse.json(
+    {
+      ...created,
+      receiptUrl: buildReceiptUrl(originFromHeaders(request.headers), created.id),
+    },
+    { status: 201 }
+  );
 }

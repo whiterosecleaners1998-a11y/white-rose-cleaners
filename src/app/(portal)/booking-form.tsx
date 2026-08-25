@@ -124,6 +124,7 @@ export default function BookingForm({
     customerName: string;
     phone: string;
     bookingCode: string;
+    receiptUrl: string;
   } | null>(null);
 
   const visibleItems = useMemo(() => {
@@ -338,6 +339,7 @@ export default function BookingForm({
         customerName: data.customerName,
         phone: data.phone,
         bookingCode: data.bookingCode,
+        receiptUrl: data.receiptUrl,
       });
       toast.success("Booking saved");
       setCustomerName("");

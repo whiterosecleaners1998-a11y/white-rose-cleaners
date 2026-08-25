@@ -3,10 +3,17 @@ import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
 
 const PUBLIC_PATHS = ["/login", "/api/login"];
 
+// Customer-facing receipt links. Guarded by their own HMAC signature rather
+// than the shop password — see lib/receipt-link.ts.
+const PUBLIC_PREFIXES = ["/r/"];
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (PUBLIC_PATHS.some((path) => pathname === path)) {
+  if (
+    PUBLIC_PATHS.some((path) => pathname === path) ||
+    PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  ) {
     return NextResponse.next();
   }
 

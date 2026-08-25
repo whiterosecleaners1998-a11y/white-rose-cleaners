@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { originFromHeaders } from "@/lib/origin";
+import { buildReceiptUrl } from "@/lib/receipt-link";
 import { serializeBooking } from "@/lib/serialize";
 import { statusBadgeClass, statusLabel } from "@/lib/status";
 import {
@@ -39,6 +42,9 @@ export default async function BookingDetailPage({
 
   const b = serializeBooking(booking);
   const shopName = process.env.SHOP_NAME || "Dry Cleaner";
+  // Built here rather than in BookingActions: signing needs SESSION_SECRET,
+  // which must not cross into a client component.
+  const receiptUrl = buildReceiptUrl(originFromHeaders(await headers()), b.id);
 
   return (
     <>
@@ -59,6 +65,7 @@ export default async function BookingDetailPage({
         bookingCode={b.bookingCode}
         totalAmount={b.totalAmount}
         shopName={shopName}
+        receiptUrl={receiptUrl}
       />
 
       <Card className="print:rounded-none print:p-0 print:ring-0">
