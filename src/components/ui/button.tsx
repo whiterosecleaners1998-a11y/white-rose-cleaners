@@ -1,3 +1,4 @@
+import * as React from "react"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 
@@ -40,15 +41,35 @@ const buttonVariants = cva(
   }
 )
 
+/**
+ * `nativeButton` tells Base UI whether the element it ends up rendering really
+ * is a <button>, so it knows whether to add the button semantics the browser
+ * would otherwise provide. It defaults to true, and several call sites here
+ * render a link instead — which earns a warning and puts a meaningless
+ * type="button" on the anchor.
+ *
+ * Derive it from what is actually being rendered rather than making every call
+ * site restate it. A function `render` cannot be inspected, so it keeps the
+ * default; an explicit prop still wins.
+ */
+function rendersNativeButton(render: ButtonPrimitive.Props["render"]): boolean {
+  if (render == null || typeof render === "function") return true
+  return React.isValidElement(render) && render.type === "button"
+}
+
 function Button({
   className,
   variant = "default",
   size = "default",
+  render,
+  nativeButton,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
   return (
     <ButtonPrimitive
       data-slot="button"
+      render={render}
+      nativeButton={nativeButton ?? rendersNativeButton(render)}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
