@@ -8,15 +8,23 @@ import {
   Image,
   StyleSheet,
 } from "@react-pdf/renderer";
+import { PAYMENT_METHODS } from "@/lib/receipt-data";
 
-const QR_CODE_BUFFER = fs.readFileSync(
-  path.join(process.cwd(), "public", "qr.png")
-);
 const LOGO_BUFFER = fs.readFileSync(
   path.join(process.cwd(), "public", "white-rose-logo.png")
 );
 const NEXIVO_BUFFER = fs.readFileSync(
   path.join(process.cwd(), "public", "nexivo-studio.png")
+);
+// Read once at module load, the same way the logos are: the codes never change
+// between requests, and a receipt should not wait on the disk to be drawn.
+const PAY_QR_BUFFERS = Object.fromEntries(
+  PAYMENT_METHODS.map((method) => [
+    method.key,
+    fs.readFileSync(
+      path.join(process.cwd(), "public", `pay-${method.key}.png`)
+    ),
+  ])
 );
 
 type SerializedBooking = {
@@ -47,8 +55,12 @@ const PADDING_X = 12;
 const CONTENT_WIDTH = PAGE_WIDTH - PADDING_X * 2;
 
 const RULE = "#dedede";
+const HAIRLINE = "#bdbdbd";
 const INK = "#000000";
 const MUTED = "#5c5c5c";
+// Light enough that a thermal head barely registers it, so the summary block
+// still reads as a block on paper without printing a grey slab.
+const WASH = "#f4f4f4";
 
 // Contact numbers printed under the receipt line. Read from the environment so
 // the shop can change who is on call without a code change, defaulting to the
@@ -72,12 +84,12 @@ const SHOP_CONTACTS = (
 // scripts/check-receipt-height.mjs re-derives them and fails if the estimate
 // ever falls short. A wrapped line costs less than a fresh row because only the
 // name re-flows, not the qty/price sub-line beside it.
-const BASE_HEIGHT = 386; // all but the contacts, Paid line, item rows and notes
-const CONTACT_LINE = 10;
-const PAID_ROW = 14; // the Paid line, printed only once money has changed hands
-const ITEM_ROW = 24;
+const BASE_HEIGHT = 548; // all but the contacts, Paid line, item rows and notes
+const CONTACT_LINE = 10.5;
+const PAID_ROW = 14.5; // the Paid line, printed only once money has changed hands
+const ITEM_ROW = 25.6;
 const EXTRA_LINE = 11;
-const NOTES_BLOCK = 23; // rule + first line
+const NOTES_BLOCK = 36; // label + first line
 
 // The first line of a cell fits more than the ones under it, so they are
 // counted separately; a single average would either spill or waste paper.
@@ -120,30 +132,59 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   header: { alignItems: "center" },
-  logo: { width: 46, height: 44 },
-  shopName: {
-    fontSize: 10,
-    fontWeight: 700,
-    marginTop: 6,
-    textAlign: "center",
-    letterSpacing: 0.3,
-  },
-  receiptLine: {
-    fontSize: 8,
+  // The asset is a full lockup — monogram, shop name and "since" line — so it
+  // is printed large enough to be read as the name. Setting the shop name in
+  // type underneath it only said the same thing twice.
+  // Height derived from the asset's own 377x362 so the mark is never squashed.
+  logo: { width: 84, height: (84 * 362) / 377 },
+  contactLine: {
+    fontSize: 7.5,
     color: MUTED,
-    marginTop: 3,
+    marginTop: 2.5,
     textAlign: "center",
-    letterSpacing: 0.4,
   },
+  contacts: { marginTop: 5, alignItems: "center" },
   rule: {
     borderBottomWidth: 1,
     borderBottomColor: RULE,
-    marginVertical: 6,
+    marginVertical: 7,
   },
+
+  // The booking number is what a customer reads out at the counter, so it gets
+  // a frame of its own rather than a line among the other details.
+  codeBand: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: HAIRLINE,
+    borderRadius: 3,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  codeCaption: { fontSize: 6.5, color: MUTED, letterSpacing: 1 },
+  codeValue: { fontSize: 13, fontWeight: 700, marginTop: 2 },
+  statusChip: {
+    borderWidth: 1,
+    borderColor: INK,
+    borderRadius: 2,
+    paddingVertical: 2.5,
+    paddingHorizontal: 5,
+  },
+  statusText: { fontSize: 7, fontWeight: 700, letterSpacing: 0.8 },
+
+  sectionLabel: {
+    fontSize: 6.5,
+    color: MUTED,
+    letterSpacing: 1.4,
+    textAlign: "center",
+    marginBottom: 5,
+  },
+
   metaRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 3.5,
+    marginBottom: 4,
   },
   metaLabel: { fontSize: 8, color: MUTED },
   metaValue: {
@@ -152,53 +193,66 @@ const styles = StyleSheet.create({
     maxWidth: CONTENT_WIDTH * 0.62,
     textAlign: "right",
   },
+
   tableHead: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderBottomColor: RULE,
+    borderBottomColor: HAIRLINE,
     paddingBottom: 3,
-    marginBottom: 3,
+    marginBottom: 5,
   },
-  contactLine: {
-    fontSize: 7.5,
-    color: MUTED,
-    marginTop: 2,
-    textAlign: "center",
-  },
-  headText: { fontSize: 7.5, color: MUTED, letterSpacing: 0.5 },
-  itemRow: { flexDirection: "row", marginBottom: 4 },
+  headText: { fontSize: 7, color: MUTED, letterSpacing: 1 },
+  itemRow: { flexDirection: "row", marginBottom: 5 },
   // The reference splits its item table 73/27; the same ratio leaves the amount
   // column wide enough for a five-figure line without crowding item names.
   colItem: { width: "73%", paddingRight: 4 },
   colAmount: { width: "27%", textAlign: "right" },
   itemName: { fontSize: 8.5, lineHeight: 1.25 },
-  itemBreak: { fontSize: 7.5, color: MUTED, marginTop: 1 },
-  totalRow: {
+  itemBreak: { fontSize: 7.5, color: MUTED, marginTop: 1.5 },
+
+  // Total, what has been paid and what is still owed belong together: read as
+  // one block they answer the only question anyone asks the counter.
+  summary: {
+    backgroundColor: WASH,
+    borderWidth: 1,
+    borderColor: HAIRLINE,
+    borderRadius: 3,
+    paddingVertical: 7,
+    paddingHorizontal: 9,
+  },
+  summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  totalLabel: { fontSize: 9, fontWeight: 700, letterSpacing: 0.5 },
-  totalValue: { fontSize: 13, fontWeight: 700 },
-  payRow: {
+  totalLabel: { fontSize: 9, fontWeight: 700, letterSpacing: 1 },
+  totalValue: { fontSize: 14, fontWeight: 700 },
+  paidRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 3,
+    marginTop: 4,
   },
-  payRowLabel: { fontSize: 8.5, color: MUTED },
-  payRowValue: { fontSize: 8.5 },
-  payBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: RULE,
+  paidLabel: { fontSize: 8, color: MUTED },
+  paidValue: { fontSize: 8.5 },
+  summaryDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: HAIRLINE,
+    marginVertical: 6,
   },
-  payQr: { width: 52, height: 52, marginRight: 10 },
-  payLabel: { fontSize: 7.5, color: MUTED, letterSpacing: 0.5 },
-  payValue: { fontSize: 9, fontWeight: 700, marginTop: 2 },
-  notes: { fontSize: 8, color: MUTED, lineHeight: 1.3 },
+  balanceLabel: { fontSize: 8, fontWeight: 700, letterSpacing: 0.8 },
+  balanceValue: { fontSize: 11, fontWeight: 700 },
+  settledValue: { fontSize: 9, fontWeight: 700, letterSpacing: 0.5 },
+
+  payRow: { flexDirection: "row" },
+  payCell: { width: "50%", alignItems: "center", paddingHorizontal: 2 },
+  payQr: { width: 76, height: 76 },
+  payProvider: { fontSize: 8, fontWeight: 700, marginTop: 5 },
+  payHolder: { fontSize: 7.5, marginTop: 1.5 },
+  payAccount: { fontSize: 7.5, color: MUTED, marginTop: 1 },
+
+  notesLabel: { fontSize: 6.5, color: MUTED, letterSpacing: 1.4 },
+  notes: { fontSize: 8, lineHeight: 1.3, marginTop: 3 },
+
   footer: { alignItems: "center" },
   footerText: { fontSize: 8, color: MUTED, textAlign: "center" },
   // Height derived from the asset's own 381x210 so the mark is never squashed.
@@ -258,106 +312,126 @@ export function ReceiptBody({
 }) {
   const expectedDelivery = getExpectedDelivery(booking.createdAt);
   const created = new Date(booking.createdAt);
+  const settled = booking.remainingAmount <= 0;
 
   return (
     <>
-        <View style={styles.header}>
-          <Image style={styles.logo} src={LOGO_BUFFER} />
-          <Text style={styles.shopName}>{shopName.toUpperCase()}</Text>
-          <Text style={styles.receiptLine}>
-            RECEIPT #{booking.bookingCode} &middot;{" "}
-            {(statusLabel[booking.status] ?? booking.status).toUpperCase()}
-          </Text>
+      <View style={styles.header}>
+        <Image style={styles.logo} src={LOGO_BUFFER} />
+        <View style={styles.contacts}>
           {SHOP_CONTACTS.map((contact) => (
             <Text key={contact.label} style={styles.contactLine}>
               {contact.label}
             </Text>
           ))}
         </View>
+      </View>
 
-        <View style={styles.rule} />
+      <View style={styles.rule} />
 
-        <MetaRow label="Customer" value={booking.customerName} />
-        <MetaRow label="Phone" value={booking.phone} />
-        <MetaRow label="Received" value={shortDate(created)} />
-        <MetaRow label="Booking #" value={booking.bookingCode} />
-        <MetaRow label="Expected" value={shortDate(expectedDelivery)} />
-        {/* Sits with the customer's details rather than under the total: it is
-            the figure the counter is asked about first. */}
-        <MetaRow
-          label="Balance"
-          value={
-            booking.remainingAmount > 0
-              ? booking.remainingAmount.toFixed(2)
-              : "Paid in full"
-          }
-        />
-
-        <View style={styles.rule} />
-
-        <View style={styles.tableHead}>
-          <Text style={[styles.colItem, styles.headText]}>ITEM</Text>
-          <Text style={[styles.colAmount, styles.headText]}>AMOUNT</Text>
+      <View style={styles.codeBand}>
+        <View>
+          <Text style={styles.codeCaption}>RECEIPT</Text>
+          <Text style={styles.codeValue}>{booking.bookingCode}</Text>
         </View>
-
-        {booking.items.map((item) => (
-          <View style={styles.itemRow} key={item.id}>
-            <View style={styles.colItem}>
-              <Text style={styles.itemName}>{item.itemName}</Text>
-              <Text style={styles.itemBreak}>
-                {item.quantity} &times; {item.unitPrice.toFixed(2)}
-              </Text>
-            </View>
-            <Text style={[styles.colAmount, styles.itemName]}>
-              {item.lineTotal.toFixed(2)}
-            </Text>
-          </View>
-        ))}
-
-        <View style={styles.rule} />
-
-        <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>TOTAL</Text>
-          <Text style={styles.totalValue}>
-            {booking.totalAmount.toFixed(2)}
+        <View style={styles.statusChip}>
+          <Text style={styles.statusText}>
+            {(statusLabel[booking.status] ?? booking.status).toUpperCase()}
           </Text>
         </View>
+      </View>
 
-        {/* Only worth printing once money has changed hands. The balance
-            itself is stated up with the customer's details. */}
+      <View style={styles.rule} />
+
+      <MetaRow label="Customer" value={booking.customerName} />
+      <MetaRow label="Phone" value={booking.phone} />
+      <MetaRow label="Received" value={shortDate(created)} />
+      <MetaRow label="Expected" value={shortDate(expectedDelivery)} />
+
+      <View style={styles.rule} />
+
+      <View style={styles.tableHead}>
+        <Text style={[styles.colItem, styles.headText]}>ITEM</Text>
+        <Text style={[styles.colAmount, styles.headText]}>AMOUNT</Text>
+      </View>
+
+      {booking.items.map((item) => (
+        <View style={styles.itemRow} key={item.id}>
+          <View style={styles.colItem}>
+            <Text style={styles.itemName}>{item.itemName}</Text>
+            <Text style={styles.itemBreak}>
+              {item.quantity} &times; {item.unitPrice.toFixed(2)}
+            </Text>
+          </View>
+          <Text style={[styles.colAmount, styles.itemName]}>
+            {item.lineTotal.toFixed(2)}
+          </Text>
+        </View>
+      ))}
+
+      <View style={styles.rule} />
+
+      <View style={styles.summary}>
+        <View style={styles.summaryRow}>
+          <Text style={styles.totalLabel}>TOTAL</Text>
+          <Text style={styles.totalValue}>{booking.totalAmount.toFixed(2)}</Text>
+        </View>
+
+        {/* Only worth printing once money has changed hands. */}
         {booking.paidAmount > 0 && (
-          <View style={styles.payRow}>
-            <Text style={styles.payRowLabel}>Paid</Text>
-            <Text style={styles.payRowValue}>
+          <View style={styles.paidRow}>
+            <Text style={styles.paidLabel}>Paid</Text>
+            <Text style={styles.paidValue}>
               {booking.paidAmount.toFixed(2)}
             </Text>
           </View>
         )}
 
-        <View style={styles.payBox}>
-          <Image style={styles.payQr} src={QR_CODE_BUFFER} />
-          <View>
-            <Text style={styles.payLabel}>SCAN TO PAY</Text>
-            <Text style={styles.payValue}>Meezan Bank</Text>
-          </View>
-        </View>
+        <View style={styles.summaryDivider} />
 
-        {booking.notes && (
-          <>
-            <View style={styles.rule} />
-            <Text style={styles.notes}>Notes: {booking.notes}</Text>
-          </>
-        )}
-
-        <View style={styles.rule} />
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Thank you for choosing {shopName}!
+        {/* The figure the counter is asked about first, so it closes the block
+            in its own weight rather than sitting among the other details. */}
+        <View style={styles.summaryRow}>
+          <Text style={styles.balanceLabel}>
+            {settled ? "BALANCE" : "BALANCE DUE"}
           </Text>
-          <Image style={styles.nexivoLogo} src={NEXIVO_BUFFER} />
-          <Text style={styles.builtBy}>System by NexivoStudio.io</Text>
+          <Text style={settled ? styles.settledValue : styles.balanceValue}>
+            {settled ? "PAID IN FULL" : booking.remainingAmount.toFixed(2)}
+          </Text>
         </View>
+      </View>
+
+      <View style={styles.rule} />
+
+      <Text style={styles.sectionLabel}>SCAN TO PAY</Text>
+      <View style={styles.payRow}>
+        {PAYMENT_METHODS.map((method) => (
+          <View key={method.key} style={styles.payCell}>
+            <Image style={styles.payQr} src={PAY_QR_BUFFERS[method.key]} />
+            <Text style={styles.payProvider}>{method.provider}</Text>
+            <Text style={styles.payHolder}>{method.holder}</Text>
+            <Text style={styles.payAccount}>{method.account}</Text>
+          </View>
+        ))}
+      </View>
+
+      {booking.notes && (
+        <>
+          <View style={styles.rule} />
+          <Text style={styles.notesLabel}>NOTES</Text>
+          <Text style={styles.notes}>{booking.notes}</Text>
+        </>
+      )}
+
+      <View style={styles.rule} />
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>
+          Thank you for choosing {shopName}!
+        </Text>
+        <Image style={styles.nexivoLogo} src={NEXIVO_BUFFER} />
+        <Text style={styles.builtBy}>System by NexivoStudio.io</Text>
+      </View>
     </>
   );
 }

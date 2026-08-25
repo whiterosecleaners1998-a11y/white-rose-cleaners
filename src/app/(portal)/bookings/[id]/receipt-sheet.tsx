@@ -3,6 +3,7 @@ import {
   shopContacts,
   shortDate,
   statusLabel,
+  PAYMENT_METHODS,
 } from "@/lib/receipt-data";
 
 /**
@@ -15,7 +16,11 @@ import {
  */
 
 const RULE = "#dedede";
+const HAIRLINE = "#bdbdbd";
 const MUTED = "#5c5c5c";
+// Light enough that a thermal head barely registers it, so the summary block
+// still reads as a block on paper without printing a grey slab.
+const WASH = "#f4f4f4";
 const CONTENT_WIDTH = "202.77pt"; // 80mm roll less its dead margin
 
 type Booking = {
@@ -38,9 +43,7 @@ type Booking = {
 };
 
 function Rule() {
-  return (
-    <div style={{ borderBottom: `1px solid ${RULE}`, margin: "6pt 0" }} />
-  );
+  return <div style={{ borderBottom: `1px solid ${RULE}`, margin: "7pt 0" }} />;
 }
 
 function MetaRow({ label, value }: { label: string; value: string }) {
@@ -50,7 +53,7 @@ function MetaRow({ label, value }: { label: string; value: string }) {
         display: "flex",
         justifyContent: "space-between",
         gap: "8pt",
-        marginBottom: "3.5pt",
+        marginBottom: "4pt",
       }}
     >
       <span style={{ fontSize: "8pt", color: MUTED }}>{label}</span>
@@ -78,6 +81,7 @@ export default function ReceiptSheet({
   const contacts = shopContacts();
   const created = new Date(booking.createdAt);
   const expected = getExpectedDelivery(booking.createdAt);
+  const settled = booking.remainingAmount <= 0;
 
   return (
     <div
@@ -98,41 +102,66 @@ export default function ReceiptSheet({
       }}
     >
       <div style={{ textAlign: "center" }}>
+        {/* The asset is a full lockup — monogram, shop name and "since" line —
+            so it is printed large enough to be read as the name. Setting the
+            shop name in type underneath it only said the same thing twice.
+            Height derived from the asset's own 377x362 so it is never squashed. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/white-rose-logo.png"
           alt=""
-          style={{ width: "46pt", height: "44pt", display: "inline-block" }}
-        />
-        <div
           style={{
-            fontSize: "10pt",
-            fontWeight: 700,
-            marginTop: "6pt",
-            letterSpacing: "0.3pt",
+            width: "84pt",
+            height: `${(84 * 362) / 377}pt`,
+            display: "inline-block",
           }}
-        >
-          {shopName.toUpperCase()}
+        />
+        <div style={{ marginTop: "5pt" }}>
+          {contacts.map((contact) => (
+            <div
+              key={contact}
+              style={{ fontSize: "7.5pt", color: MUTED, marginTop: "2.5pt" }}
+            >
+              {contact}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <Rule />
+
+      {/* The booking number is what a customer reads out at the counter, so it
+          gets a frame of its own rather than a line among the other details. */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          border: `1px solid ${HAIRLINE}`,
+          borderRadius: "3pt",
+          padding: "6pt 8pt",
+        }}
+      >
+        <div>
+          <div style={{ fontSize: "6.5pt", color: MUTED, letterSpacing: "1pt" }}>
+            RECEIPT
+          </div>
+          <div style={{ fontSize: "13pt", fontWeight: 700, marginTop: "2pt" }}>
+            {booking.bookingCode}
+          </div>
         </div>
         <div
           style={{
-            fontSize: "8pt",
-            color: MUTED,
-            marginTop: "3pt",
-            letterSpacing: "0.4pt",
+            border: "1px solid #000000",
+            borderRadius: "2pt",
+            padding: "2.5pt 5pt",
+            fontSize: "7pt",
+            fontWeight: 700,
+            letterSpacing: "0.8pt",
           }}
         >
-          RECEIPT #{booking.bookingCode} &middot;{" "}
           {(statusLabel[booking.status] ?? booking.status).toUpperCase()}
         </div>
-        {contacts.map((contact) => (
-          <div
-            key={contact}
-            style={{ fontSize: "7.5pt", color: MUTED, marginTop: "2pt" }}
-          >
-            {contact}
-          </div>
-        ))}
       </div>
 
       <Rule />
@@ -140,30 +169,19 @@ export default function ReceiptSheet({
       <MetaRow label="Customer" value={booking.customerName} />
       <MetaRow label="Phone" value={booking.phone} />
       <MetaRow label="Received" value={shortDate(created)} />
-      <MetaRow label="Booking #" value={booking.bookingCode} />
       <MetaRow label="Expected" value={shortDate(expected)} />
-      {/* Sits with the customer's details rather than under the total: it is
-          the figure the counter is asked about first. */}
-      <MetaRow
-        label="Balance"
-        value={
-          booking.remainingAmount > 0
-            ? booking.remainingAmount.toFixed(2)
-            : "Paid in full"
-        }
-      />
 
       <Rule />
 
       <div
         style={{
           display: "flex",
-          borderBottom: `1px solid ${RULE}`,
+          borderBottom: `1px solid ${HAIRLINE}`,
           paddingBottom: "3pt",
-          marginBottom: "3pt",
-          fontSize: "7.5pt",
+          marginBottom: "5pt",
+          fontSize: "7pt",
           color: MUTED,
-          letterSpacing: "0.5pt",
+          letterSpacing: "1pt",
         }}
       >
         <span style={{ width: "73%" }}>ITEM</span>
@@ -171,10 +189,12 @@ export default function ReceiptSheet({
       </div>
 
       {booking.items.map((item) => (
-        <div key={item.id} style={{ display: "flex", marginBottom: "4pt" }}>
+        <div key={item.id} style={{ display: "flex", marginBottom: "5pt" }}>
           <div style={{ width: "73%", paddingRight: "4pt" }}>
             <div>{item.itemName}</div>
-            <div style={{ fontSize: "7.5pt", color: MUTED, marginTop: "1pt" }}>
+            <div
+              style={{ fontSize: "7.5pt", color: MUTED, marginTop: "1.5pt" }}
+            >
               {item.quantity} &times; {item.unitPrice.toFixed(2)}
             </div>
           </div>
@@ -186,69 +206,140 @@ export default function ReceiptSheet({
 
       <Rule />
 
+      {/* Total, what has been paid and what is still owed belong together: read
+          as one block they answer the only question anyone asks the counter. */}
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
+          backgroundColor: WASH,
+          border: `1px solid ${HAIRLINE}`,
+          borderRadius: "3pt",
+          padding: "7pt 9pt",
+          // Chrome drops backgrounds from print by default; without this the
+          // block would lose the wash the PDF has.
+          WebkitPrintColorAdjust: "exact",
+          printColorAdjust: "exact",
         }}
       >
-        <span
-          style={{ fontSize: "9pt", fontWeight: 700, letterSpacing: "0.5pt" }}
-        >
-          TOTAL
-        </span>
-        <span style={{ fontSize: "13pt", fontWeight: 700 }}>
-          {booking.totalAmount.toFixed(2)}
-        </span>
-      </div>
-
-      {/* Mirrors the PDF: printed only once money has changed hands. The
-          balance itself is stated up with the customer's details. */}
-      {booking.paidAmount > 0 && (
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
-            marginTop: "3pt",
-            fontSize: "8.5pt",
+            alignItems: "center",
           }}
         >
-          <span style={{ color: MUTED }}>Paid</span>
-          <span>{booking.paidAmount.toFixed(2)}</span>
+          <span
+            style={{ fontSize: "9pt", fontWeight: 700, letterSpacing: "1pt" }}
+          >
+            TOTAL
+          </span>
+          <span style={{ fontSize: "14pt", fontWeight: 700 }}>
+            {booking.totalAmount.toFixed(2)}
+          </span>
         </div>
-      )}
+
+        {/* Only worth printing once money has changed hands. */}
+        {booking.paidAmount > 0 && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginTop: "4pt",
+            }}
+          >
+            <span style={{ fontSize: "8pt", color: MUTED }}>Paid</span>
+            <span style={{ fontSize: "8.5pt" }}>
+              {booking.paidAmount.toFixed(2)}
+            </span>
+          </div>
+        )}
+
+        <div
+          style={{
+            borderBottom: `1px solid ${HAIRLINE}`,
+            margin: "6pt 0",
+          }}
+        />
+
+        {/* The figure the counter is asked about first, so it closes the block
+            in its own weight rather than sitting among the other details. */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span
+            style={{ fontSize: "8pt", fontWeight: 700, letterSpacing: "0.8pt" }}
+          >
+            {settled ? "BALANCE" : "BALANCE DUE"}
+          </span>
+          <span
+            style={
+              settled
+                ? { fontSize: "9pt", fontWeight: 700, letterSpacing: "0.5pt" }
+                : { fontSize: "11pt", fontWeight: 700 }
+            }
+          >
+            {settled ? "PAID IN FULL" : booking.remainingAmount.toFixed(2)}
+          </span>
+        </div>
+      </div>
+
+      <Rule />
 
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          marginTop: "8pt",
-          paddingTop: "8pt",
-          borderTop: `1px solid ${RULE}`,
+          fontSize: "6.5pt",
+          color: MUTED,
+          letterSpacing: "1.4pt",
+          textAlign: "center",
+          marginBottom: "5pt",
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/qr.png"
-          alt=""
-          style={{ width: "52pt", height: "52pt", marginRight: "10pt" }}
-        />
-        <div>
-          <div style={{ fontSize: "7.5pt", color: MUTED, letterSpacing: "0.5pt" }}>
-            SCAN TO PAY
+        SCAN TO PAY
+      </div>
+      <div style={{ display: "flex" }}>
+        {PAYMENT_METHODS.map((method) => (
+          <div
+            key={method.key}
+            style={{
+              width: "50%",
+              padding: "0 2pt",
+              textAlign: "center",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/pay-${method.key}.png`}
+              alt=""
+              style={{ width: "76pt", height: "76pt", display: "inline-block" }}
+            />
+            <div
+              style={{ fontSize: "8pt", fontWeight: 700, marginTop: "5pt" }}
+            >
+              {method.provider}
+            </div>
+            <div style={{ fontSize: "7.5pt", marginTop: "1.5pt" }}>
+              {method.holder}
+            </div>
+            <div style={{ fontSize: "7.5pt", color: MUTED, marginTop: "1pt" }}>
+              {method.account}
+            </div>
           </div>
-          <div style={{ fontSize: "9pt", fontWeight: 700, marginTop: "2pt" }}>
-            Meezan Bank
-          </div>
-        </div>
+        ))}
       </div>
 
       {booking.notes && (
         <>
           <Rule />
-          <div style={{ fontSize: "8pt", color: MUTED, lineHeight: 1.3 }}>
-            Notes: {booking.notes}
+          <div
+            style={{ fontSize: "6.5pt", color: MUTED, letterSpacing: "1.4pt" }}
+          >
+            NOTES
+          </div>
+          <div style={{ fontSize: "8pt", lineHeight: 1.3, marginTop: "3pt" }}>
+            {booking.notes}
           </div>
         </>
       )}

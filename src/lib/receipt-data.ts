@@ -45,3 +45,35 @@ export const statusLabel: Record<string, string> = {
   READY: "Ready",
   DELIVERED: "Delivered",
 };
+
+/**
+ * Where a customer can send money, printed as a scannable code at the foot of
+ * the receipt. The `key` names the artwork: the PDF reads
+ * `public/pay-<key>.png` off disk, the printable sheet points an <img> at
+ * `/pay-<key>.png`, and both take their captions from here so the two cannot
+ * disagree about whose account a code belongs to.
+ *
+ * Two is the practical limit — a third column would squeeze each code below the
+ * size a phone camera can resolve off an 80mm slip.
+ */
+export type PaymentMethod = {
+  key: string;
+  provider: string;
+  holder: string;
+  account: string;
+};
+
+export const PAYMENT_METHODS: PaymentMethod[] = [
+  {
+    key: "meezan",
+    provider: "Meezan Bank",
+    holder: "Faizan Boota",
+    account: "•••• 5823",
+  },
+  {
+    key: "easypaisa",
+    provider: "Easypaisa",
+    holder: "Wajid Ali",
+    account: "0345-2235356",
+  },
+];
