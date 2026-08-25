@@ -7,9 +7,13 @@
  * nothing to configure.
  */
 export function originFromHeaders(headers: Headers): string {
-  const host = headers.get("host") ?? "localhost:3000";
-  // Vercel terminates TLS ahead of the app, so the proto header is the honest
-  // one. Falling back by host keeps plain-http local dev working.
+  // A reverse proxy in front of the app (Hostinger's router, nginx, Vercel)
+  // rewrites Host to the internal target and puts the public name in
+  // x-forwarded-host, so prefer that where it is present.
+  const host =
+    headers.get("x-forwarded-host") ?? headers.get("host") ?? "localhost:3000";
+  // TLS is terminated ahead of the app, so the proto header is the honest one.
+  // Falling back by host keeps plain-http local dev working.
   const proto =
     headers.get("x-forwarded-proto") ??
     (host.startsWith("localhost") || host.startsWith("127.0.0.1")

@@ -2,10 +2,13 @@
   "name": "drycleaner-portal",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev -p 3010",
     "build": "next build",
-    "start": "next start -p 3010",
+    "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate"
   },
