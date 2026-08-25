@@ -25,17 +25,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // The server cannot know the saved sidebar state, so it renders the
+    // expanded default and the script below corrects it during parsing.
+    // suppressHydrationWarning covers exactly that: it is shallow, so it
+    // silences the data-sidebar mismatch on <html> without hiding anything
+    // in the tree underneath.
     <html
       lang="en"
+      data-sidebar="expanded"
+      suppressHydrationWarning
       className={`${afacad.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        {/* Raw and inline on purpose. next/script's beforeInteractive queues
-            into __next_s and runs after paint, which is too late to stop the
-            sidebar opening wide and snapping shut; this executes as the parser
-            reaches it. Being in the root layout it is only ever hydrated, never
-            mounted fresh on the client, so React does not re-create it. */}
+      <head>
+        {/* Raw, inline, and in the head on purpose. next/script's
+            beforeInteractive queues into __next_s and runs after paint, too
+            late to stop the sidebar opening wide and snapping shut; this runs
+            as the parser reaches it, before any of the shell is painted. */}
         <script dangerouslySetInnerHTML={{ __html: RESTORE_SIDEBAR_SCRIPT }} />
+      </head>
+      <body className="min-h-full flex flex-col">
         {children}
         <Toaster position="top-center" />
       </body>
