@@ -51,12 +51,13 @@ async function minHeight(booking) {
 const SHORT = "Shirt";
 const LONG = "Three Piece Suit - Dry Clean and Press";
 
-function booking({ n, name = SHORT, notes = null }) {
+function booking({ n, name = SHORT, notes = null, paidAmount = 0 }) {
   return {
     id: "x", bookingCode: "WRD-00009",
     customerName: "Muhammad Sabih Ul Ebad",
     phone: "03001234567", status: "RECEIVED",
     totalAmount: 385 * n, notes,
+    paidAmount, remainingAmount: 385 * n - paidAmount,
     createdAt: new Date("2026-08-24T10:00:00Z"),
     items: Array.from({ length: n }, (_, i) => ({
       id: "i" + i, itemName: name, unitPrice: 385,
@@ -74,6 +75,7 @@ const CASES = [
   ["1 long", booking({ n: 1, name: LONG })],
   ["8 long", booking({ n: 8, name: LONG })],
   ["20 long", booking({ n: 20, name: LONG })],
+  ["8 short part-paid", booking({ n: 8, paidAmount: 500 })],
   ["8 short + notes", booking({ n: 8, notes: "Handle the silk scarf gently and use extra starch on the collars please." })],
   ["20 long + notes", booking({ n: 20, name: LONG, notes: "Handle the silk scarf gently and use extra starch on the collars please. Ring before delivery." })],
 ];

@@ -105,6 +105,20 @@ export default async function BookingDetailPage({
                 {b.bookingCode}
               </dd>
             </div>
+            <div>
+              <dt className="text-muted-foreground">Balance</dt>
+              <dd
+                className={
+                  b.remainingAmount > 0
+                    ? "font-medium tabular-nums text-amber-700 dark:text-amber-400"
+                    : "font-medium tabular-nums text-green-700 dark:text-green-400"
+                }
+              >
+                {b.remainingAmount > 0
+                  ? b.remainingAmount.toFixed(2)
+                  : "Paid in full"}
+              </dd>
+            </div>
           </dl>
 
           <Separator className="my-4" />
@@ -147,17 +161,6 @@ export default async function BookingDetailPage({
                 Paid: {b.paidAmount.toFixed(2)}
               </p>
             )}
-            <p
-              className={
-                b.remainingAmount > 0
-                  ? "text-sm font-medium tabular-nums text-amber-700 dark:text-amber-400"
-                  : "text-sm font-medium tabular-nums text-green-700 dark:text-green-400"
-              }
-            >
-              {b.remainingAmount > 0
-                ? `Balance: ${b.remainingAmount.toFixed(2)}`
-                : "Paid in full"}
-            </p>
           </div>
 
           {b.notes && (

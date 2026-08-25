@@ -72,8 +72,9 @@ const SHOP_CONTACTS = (
 // scripts/check-receipt-height.mjs re-derives them and fails if the estimate
 // ever falls short. A wrapped line costs less than a fresh row because only the
 // name re-flows, not the qty/price sub-line beside it.
-const BASE_HEIGHT = 372; // everything but the contacts, item rows and notes
+const BASE_HEIGHT = 386; // all but the contacts, Paid line, item rows and notes
 const CONTACT_LINE = 10;
+const PAID_ROW = 14; // the Paid line, printed only once money has changed hands
 const ITEM_ROW = 24;
 const EXTRA_LINE = 11;
 const NOTES_BLOCK = 23; // rule + first line
@@ -97,6 +98,7 @@ function lineCount(text: string, firstLine: number, wrapLine: number) {
 // the tail onto a second cut.
 export function estimateHeight(booking: SerializedBooking) {
   let h = BASE_HEIGHT + SHOP_CONTACTS.length * CONTACT_LINE;
+  if (booking.paidAmount > 0) h += PAID_ROW;
   for (const item of booking.items) {
     const lines = lineCount(item.itemName, ITEM_FIRST_LINE, ITEM_WRAP_LINE);
     h += ITEM_ROW + (lines - 1) * EXTRA_LINE;
@@ -185,8 +187,6 @@ const styles = StyleSheet.create({
   },
   payRowLabel: { fontSize: 8.5, color: MUTED },
   payRowValue: { fontSize: 8.5 },
-  balanceLabel: { fontSize: 9, fontWeight: 700, letterSpacing: 0.5 },
-  balanceValue: { fontSize: 10, fontWeight: 700 },
   payBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -282,6 +282,16 @@ export function ReceiptBody({
         <MetaRow label="Received" value={shortDate(created)} />
         <MetaRow label="Booking #" value={booking.bookingCode} />
         <MetaRow label="Expected" value={shortDate(expectedDelivery)} />
+        {/* Sits with the customer's details rather than under the total: it is
+            the figure the counter is asked about first. */}
+        <MetaRow
+          label="Balance"
+          value={
+            booking.remainingAmount > 0
+              ? booking.remainingAmount.toFixed(2)
+              : "Paid in full"
+          }
+        />
 
         <View style={styles.rule} />
 
@@ -313,27 +323,15 @@ export function ReceiptBody({
           </Text>
         </View>
 
-        {/* Only worth printing once money has changed hands: on an unpaid
-            order the balance is the total, already stated above. */}
+        {/* Only worth printing once money has changed hands. The balance
+            itself is stated up with the customer's details. */}
         {booking.paidAmount > 0 && (
-          <>
-            <View style={styles.payRow}>
-              <Text style={styles.payRowLabel}>Paid</Text>
-              <Text style={styles.payRowValue}>
-                {booking.paidAmount.toFixed(2)}
-              </Text>
-            </View>
-            <View style={styles.payRow}>
-              <Text style={styles.balanceLabel}>
-                {booking.remainingAmount > 0 ? "BALANCE" : "PAID IN FULL"}
-              </Text>
-              {booking.remainingAmount > 0 && (
-                <Text style={styles.balanceValue}>
-                  {booking.remainingAmount.toFixed(2)}
-                </Text>
-              )}
-            </View>
-          </>
+          <View style={styles.payRow}>
+            <Text style={styles.payRowLabel}>Paid</Text>
+            <Text style={styles.payRowValue}>
+              {booking.paidAmount.toFixed(2)}
+            </Text>
+          </View>
         )}
 
         <View style={styles.payBox}>
