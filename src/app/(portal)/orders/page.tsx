@@ -111,7 +111,7 @@ export default async function OrdersPage({
 
       <section className="mb-4">
         <h2 className="mb-2 text-sm font-medium">Quick Stats</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
           <StatCard
             icon={Receipt}
             label="Total Orders"
@@ -147,6 +147,13 @@ export default async function OrdersPage({
             label="Avg Order Value"
             value={stats.averageOrderValue.toFixed(0)}
           />
+          <StatCard
+            icon={Wallet}
+            label="Outstanding"
+            value={stats.outstanding.toFixed(0)}
+            note={stats.outstanding > 0 ? "unpaid" : "all settled"}
+            tone={stats.outstanding > 0 ? "warning" : "positive"}
+          />
         </div>
       </section>
 
@@ -171,6 +178,7 @@ export default async function OrdersPage({
                       Phone
                     </TableHead>
                     <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-right">Balance</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="hidden sm:table-cell">Date</TableHead>
                   </TableRow>
@@ -194,6 +202,17 @@ export default async function OrdersPage({
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {b.totalAmount.toFixed(2)}
+                      </TableCell>
+                      <TableCell
+                        className={
+                          b.remainingAmount > 0
+                            ? "text-right font-medium tabular-nums text-amber-700 dark:text-amber-400"
+                            : "text-right tabular-nums text-muted-foreground"
+                        }
+                      >
+                        {b.remainingAmount > 0
+                          ? b.remainingAmount.toFixed(2)
+                          : "—"}
                       </TableCell>
                       <TableCell>
                         <Badge className={statusBadgeClass[b.status]}>

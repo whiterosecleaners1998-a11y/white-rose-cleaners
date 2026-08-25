@@ -24,6 +24,8 @@ type Booking = {
   phone: string;
   status: string;
   totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
   notes: string | null;
   createdAt: Date | string;
   items: {
@@ -190,6 +192,46 @@ export default function ReceiptSheet({
           {booking.totalAmount.toFixed(2)}
         </span>
       </div>
+
+      {/* Mirrors the PDF: printed only once money has changed hands, since on
+          an unpaid order the balance is the total just above. */}
+      {booking.paidAmount > 0 && (
+        <>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginTop: "3pt",
+              fontSize: "8.5pt",
+            }}
+          >
+            <span style={{ color: MUTED }}>Paid</span>
+            <span>{booking.paidAmount.toFixed(2)}</span>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginTop: "3pt",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "9pt",
+                fontWeight: 700,
+                letterSpacing: "0.5pt",
+              }}
+            >
+              {booking.remainingAmount > 0 ? "BALANCE" : "PAID IN FULL"}
+            </span>
+            {booking.remainingAmount > 0 && (
+              <span style={{ fontSize: "10pt", fontWeight: 700 }}>
+                {booking.remainingAmount.toFixed(2)}
+              </span>
+            )}
+          </div>
+        </>
+      )}
 
       <div
         style={{

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { balanceOf } from "@/lib/money";
 
 export type OrderStats = {
   total: number;
@@ -7,6 +8,7 @@ export type OrderStats = {
   deliveredToday: number;
   revenueToday: number;
   averageOrderValue: number;
+  outstanding: number;
 };
 
 function startOfToday(): Date {
@@ -23,7 +25,7 @@ function startOfToday(): Date {
 export async function getOrderStats(): Promise<OrderStats> {
   const today = startOfToday();
 
-  const [byStatus, total, deliveredToday, todayRevenue, allTime] =
+  const [byStatus, total, deliveredToday, todayRevenue, allTime, owed] =
     await Promise.all([
       prisma.booking.groupBy({ by: ["status"], _count: { _all: true } }),
       prisma.booking.count(),
@@ -35,6 +37,11 @@ export async function getOrderStats(): Promise<OrderStats> {
         where: { createdAt: { gte: today } },
       }),
       prisma.booking.aggregate({ _avg: { totalAmount: true } }),
+      // Everything still owed across the shop, not just today - an unpaid
+      // order from last week is money outstanding all the same.
+      prisma.booking.aggregate({
+        _sum: { totalAmount: true, paidAmount: true },
+      }),
     ]);
 
   const counts = new Map(byStatus.map((row) => [row.status, row._count._all]));
@@ -46,5 +53,9 @@ export async function getOrderStats(): Promise<OrderStats> {
     deliveredToday,
     revenueToday: Number(todayRevenue._sum.totalAmount ?? 0),
     averageOrderValue: Number(allTime._avg.totalAmount ?? 0),
+    outstanding: balanceOf(
+      Number(owed._sum.totalAmount ?? 0),
+      Number(owed._sum.paidAmount ?? 0)
+    ),
   };
 }

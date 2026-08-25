@@ -26,6 +26,8 @@ type SerializedBooking = {
   phone: string;
   status: string;
   totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
   notes: string | null;
   createdAt: Date | string;
   items: {
@@ -176,6 +178,15 @@ const styles = StyleSheet.create({
   },
   totalLabel: { fontSize: 9, fontWeight: 700, letterSpacing: 0.5 },
   totalValue: { fontSize: 13, fontWeight: 700 },
+  payRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 3,
+  },
+  payRowLabel: { fontSize: 8.5, color: MUTED },
+  payRowValue: { fontSize: 8.5 },
+  balanceLabel: { fontSize: 9, fontWeight: 700, letterSpacing: 0.5 },
+  balanceValue: { fontSize: 10, fontWeight: 700 },
   payBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -301,6 +312,29 @@ export function ReceiptBody({
             {booking.totalAmount.toFixed(2)}
           </Text>
         </View>
+
+        {/* Only worth printing once money has changed hands: on an unpaid
+            order the balance is the total, already stated above. */}
+        {booking.paidAmount > 0 && (
+          <>
+            <View style={styles.payRow}>
+              <Text style={styles.payRowLabel}>Paid</Text>
+              <Text style={styles.payRowValue}>
+                {booking.paidAmount.toFixed(2)}
+              </Text>
+            </View>
+            <View style={styles.payRow}>
+              <Text style={styles.balanceLabel}>
+                {booking.remainingAmount > 0 ? "BALANCE" : "PAID IN FULL"}
+              </Text>
+              {booking.remainingAmount > 0 && (
+                <Text style={styles.balanceValue}>
+                  {booking.remainingAmount.toFixed(2)}
+                </Text>
+              )}
+            </View>
+          </>
+        )}
 
         <View style={styles.payBox}>
           <Image style={styles.payQr} src={QR_CODE_BUFFER} />

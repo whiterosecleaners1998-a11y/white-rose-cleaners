@@ -22,6 +22,10 @@ model Booking {
   phone                 String
   status                BookingStatus @default(RECEIVED)
   totalAmount           Decimal       @db.Decimal(10, 2)
+  // Money taken so far, whether an advance at drop-off or the balance on
+  // collection. What is still owed is totalAmount - paidAmount; it is derived
+  // rather than stored so the two can never disagree.
+  paidAmount            Decimal       @default(0) @db.Decimal(10, 2)
   notes                 String?
   createdAt             DateTime      @default(now())
   readyAt               DateTime?

@@ -18,9 +18,17 @@ export async function GET(
   return NextResponse.json(serializeBooking(booking));
 }
 
-const updateSchema = z.object({
-  status: z.enum(["RECEIVED", "READY", "DELIVERED"]),
-});
+// Both fields are optional so the status control and the payment box can each
+// PATCH just their own field, but a body carrying neither is a mistake.
+const updateSchema = z
+  .object({
+    status: z.enum(["RECEIVED", "READY", "DELIVERED"]),
+    paidAmount: z.number().nonnegative(),
+  })
+  .partial()
+  .refine((body) => body.status !== undefined || body.paidAmount !== undefined, {
+    message: "Nothing to update",
+  });
 
 export async function PATCH(
   request: NextRequest,
@@ -30,7 +38,7 @@ export async function PATCH(
   const body = await request.json().catch(() => null);
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid update" }, { status: 400 });
   }
 
   const existing = await prisma.booking.findUnique({ where: { id } });
@@ -40,13 +48,26 @@ export async function PATCH(
 
   const now = new Date();
   const data: {
-    status: "RECEIVED" | "READY" | "DELIVERED";
+    status?: "RECEIVED" | "READY" | "DELIVERED";
     readyAt?: Date;
     deliveredAt?: Date;
-  } = { status: parsed.data.status };
-  if (parsed.data.status === "READY" && !existing.readyAt) data.readyAt = now;
-  if (parsed.data.status === "DELIVERED" && !existing.deliveredAt)
-    data.deliveredAt = now;
+    paidAmount?: number;
+  } = {};
+
+  if (parsed.data.status) {
+    data.status = parsed.data.status;
+    if (parsed.data.status === "READY" && !existing.readyAt) data.readyAt = now;
+    if (parsed.data.status === "DELIVERED" && !existing.deliveredAt)
+      data.deliveredAt = now;
+  }
+
+  if (parsed.data.paidAmount !== undefined) {
+    // Capped at the order total for the same reason as on create.
+    data.paidAmount = Math.min(
+      parsed.data.paidAmount,
+      Number(existing.totalAmount)
+    );
+  }
 
   const booking = await prisma.booking.update({
     where: { id },

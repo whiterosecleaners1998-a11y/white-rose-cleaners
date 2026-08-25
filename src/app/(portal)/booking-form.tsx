@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { balanceOf } from "@/lib/money";
 import { buildWhatsAppLink } from "@/lib/whatsapp-link";
 import {
   orderReceivedMessage,
@@ -116,6 +117,7 @@ export default function BookingForm({
   const [cart, setCart] = useState<CartLine[]>([]);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"items" | "bundles">("items");
+  const [advance, setAdvance] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
@@ -125,6 +127,8 @@ export default function BookingForm({
     phone: string;
     bookingCode: string;
     receiptUrl: string;
+    paidAmount: number;
+    remainingAmount: number;
   } | null>(null);
 
   const visibleItems = useMemo(() => {
@@ -162,6 +166,15 @@ export default function BookingForm({
     () => lines.reduce((sum, line) => sum + line.price * line.quantity, 0),
     [lines],
   );
+
+  // An empty or half-typed advance box reads as nothing paid, and anything
+  // above the total is a typo — the server caps it either way.
+  const typedAdvance = Number(advance);
+  const advanceAmount =
+    advance.trim() === "" || !Number.isFinite(typedAdvance)
+      ? 0
+      : Math.min(Math.max(typedAdvance, 0), total);
+  const balance = balanceOf(total, advanceAmount);
 
   const itemCount = useMemo(
     () => lines.reduce((sum, line) => sum + line.quantity, 0),
@@ -321,6 +334,7 @@ export default function BookingForm({
           customerName,
           phone,
           notes: notes || undefined,
+          paidAmount: advanceAmount,
           items: lines.map((line) => ({
             name: line.name,
             unitPrice: line.price,
@@ -340,11 +354,14 @@ export default function BookingForm({
         phone: data.phone,
         bookingCode: data.bookingCode,
         receiptUrl: data.receiptUrl,
+        paidAmount: data.paidAmount,
+        remainingAmount: data.remainingAmount,
       });
       toast.success("Booking saved");
       setCustomerName("");
       setPhone("");
       setNotes("");
+      setAdvance("");
       setCart([]);
       setSearch("");
       router.refresh();
@@ -366,6 +383,11 @@ export default function BookingForm({
         </AlertTitle>
         <AlertDescription>
           Booking #{result.bookingCode} for {result.customerName}.
+          {result.paidAmount > 0 &&
+            ` Paid ${result.paidAmount.toFixed(2)}.`}
+          {result.remainingAmount > 0
+            ? ` Balance ${result.remainingAmount.toFixed(2)}.`
+            : " Paid in full."}
         </AlertDescription>
         {/* Alert lays its children out on a grid whose first column is sized
             for the icon; only AlertTitle/Description opt into column 2, so an
@@ -743,7 +765,35 @@ export default function BookingForm({
       <Separator />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-base font-semibold">Total: {total.toFixed(2)}</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-base font-semibold">Total: {total.toFixed(2)}</p>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="advance" className="text-sm text-muted-foreground">
+              Advance
+            </Label>
+            <Input
+              id="advance"
+              type="number"
+              min={0}
+              max={total}
+              step="0.01"
+              inputMode="decimal"
+              placeholder="0.00"
+              value={advance}
+              onChange={(e) => setAdvance(e.target.value)}
+              className="h-9 w-24 tabular-nums"
+            />
+          </div>
+          <p
+            className={
+              balance > 0
+                ? "text-sm font-medium tabular-nums text-amber-700 dark:text-amber-400"
+                : "text-sm font-medium tabular-nums text-green-700 dark:text-green-400"
+            }
+          >
+            {balance > 0 ? `Balance: ${balance.toFixed(2)}` : "Paid in full"}
+          </p>
+        </div>
         <Button
           type="submit"
           disabled={submitting}

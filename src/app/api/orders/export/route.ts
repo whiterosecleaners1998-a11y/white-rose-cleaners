@@ -24,6 +24,8 @@ export async function GET(request: NextRequest) {
     Phone: b.phone,
     Status: statusLabel[b.status] ?? b.status,
     "Total Amount": b.totalAmount,
+    Paid: b.paidAmount,
+    Balance: b.remainingAmount,
     Items: b.items
       .map((item) => `${item.itemName} x${item.quantity}`)
       .join(", "),
@@ -42,6 +44,8 @@ export async function GET(request: NextRequest) {
     { wch: 15 },
     { wch: 12 },
     { wch: 12 },
+    { wch: 10 },
+    { wch: 10 },
     { wch: 40 },
     { wch: 20 },
     { wch: 20 },

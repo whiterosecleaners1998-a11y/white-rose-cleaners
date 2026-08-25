@@ -14,6 +14,23 @@
  * no URL the message reads exactly as it did before.
  */
 
+type Payment = { paidAmount?: number; remainingAmount?: number };
+
+/**
+ * Money still owed, in the customer's words. Silent when nothing has been paid
+ * — the total is already in the message and repeating it as "baqaya" only adds
+ * noise — and silent again once the order is settled on a Received message,
+ * where the useful fact is the amount, not the absence of a debt.
+ */
+function paymentSentence({ paidAmount, remainingAmount }: Payment): string {
+  if (paidAmount === undefined || remainingAmount === undefined) return "";
+  if (paidAmount <= 0) return "";
+  if (remainingAmount <= 0) return " Poori adaigi mil chuki hai.";
+  return ` Advance: Rs. ${paidAmount.toFixed(
+    2
+  )}. Baqaya: Rs. ${remainingAmount.toFixed(2)}.`;
+}
+
 /** Blank lines around the link so WhatsApp shows it as its own tappable row. */
 function withReceipt(body: string, receiptUrl: string | undefined): string {
   return receiptUrl ? `${body}\n\nReceipt: ${receiptUrl}` : body;
@@ -25,16 +42,18 @@ export function orderReceivedMessage({
   totalAmount,
   shopName,
   receiptUrl,
+  paidAmount,
+  remainingAmount,
 }: {
   customerName: string;
   bookingCode: string;
   totalAmount: number;
   shopName: string;
   receiptUrl?: string;
-}): string {
+} & Payment): string {
   const body = `Assalam-o-Alaikum ${customerName}, aap ka order #${bookingCode} hamein mil gaya hai. Total: Rs. ${totalAmount.toFixed(
     2
-  )}. Kapre taiyar hote hi hum aap ko message kar denge.`;
+  )}.${paymentSentence({ paidAmount, remainingAmount })} Kapre taiyar hote hi hum aap ko message kar denge.`;
   return `${withReceipt(body, receiptUrl)}\n\nShukriya! - ${shopName}`;
 }
 
@@ -43,13 +62,21 @@ export function orderReadyMessage({
   bookingCode,
   shopName,
   receiptUrl,
+  remainingAmount,
 }: {
   customerName: string;
   bookingCode: string;
   shopName: string;
   receiptUrl?: string;
-}): string {
-  const body = `Assalam-o-Alaikum ${customerName}, aap ka order #${bookingCode} taiyar hai. Aap kisi bhi waqt tashreef la kar le ja sakte hain.`;
+} & Payment): string {
+  // Unlike the received message this one never quoted a figure, so the balance
+  // is worth stating outright however the order was paid - it is what the
+  // customer needs to bring with them.
+  const due =
+    remainingAmount && remainingAmount > 0
+      ? ` Baqaya Rs. ${remainingAmount.toFixed(2)} pickup par ada kar dijiye ga.`
+      : "";
+  const body = `Assalam-o-Alaikum ${customerName}, aap ka order #${bookingCode} taiyar hai. Aap kisi bhi waqt tashreef la kar le ja sakte hain.${due}`;
   return `${withReceipt(body, receiptUrl)}\n\nShukriya! - ${shopName}`;
 }
 

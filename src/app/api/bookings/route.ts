@@ -49,6 +49,8 @@ const createSchema = z.object({
   customerName: z.string().trim().min(1).max(200),
   phone: z.string().trim().min(5).max(30),
   notes: z.string().trim().max(1000).optional(),
+  // Advance taken at drop-off. Absent means nothing paid yet.
+  paidAmount: z.number().nonnegative().optional(),
   items: z
     .array(
       z.object({
@@ -77,12 +79,17 @@ export async function POST(request: NextRequest) {
     0
   );
 
+  // Staff can only have taken what the order is worth; anything beyond it is a
+  // typo, and letting it through would show as a negative balance.
+  const paidAmount = Math.min(parsed.data.paidAmount ?? 0, totalAmount);
+
   const booking = await prisma.booking.create({
     data: {
       customerName,
       phone: phoneNormalized,
       notes,
       totalAmount,
+      paidAmount,
       items: {
         create: items.map((item) => ({
           itemName: item.name,
