@@ -97,6 +97,11 @@ const ITEM_FIRST_LINE = 43;
 const ITEM_WRAP_LINE = 33;
 const NOTE_FIRST_LINE = 55;
 const NOTE_WRAP_LINE = 56;
+// Meta values are right-aligned into 62% of the column at 8.5pt bold, so a
+// customer name much past this wraps onto a second line. Left out of the
+// estimate originally, which is exactly how a long name pushed the tail of the
+// receipt onto a second page.
+const META_VALUE_LINE = 24;
 
 function lineCount(text: string, firstLine: number, wrapLine: number) {
   if (text.length <= firstLine) return 1;
@@ -111,6 +116,10 @@ function lineCount(text: string, firstLine: number, wrapLine: number) {
 export function estimateHeight(booking: SerializedBooking) {
   let h = BASE_HEIGHT + SHOP_CONTACTS.length * CONTACT_LINE;
   if (booking.paidAmount > 0) h += PAID_ROW;
+  // Only the name and phone are free text; the dates cannot wrap.
+  for (const value of [booking.customerName, booking.phone]) {
+    h += (lineCount(value, META_VALUE_LINE, META_VALUE_LINE) - 1) * EXTRA_LINE;
+  }
   for (const item of booking.items) {
     const lines = lineCount(item.itemName, ITEM_FIRST_LINE, ITEM_WRAP_LINE);
     h += ITEM_ROW + (lines - 1) * EXTRA_LINE;
@@ -436,16 +445,25 @@ export function ReceiptBody({
   );
 }
 
+/**
+ * `height` overrides the estimate. lib/receipt-file re-renders taller when a
+ * receipt spills, and needs to be able to say how tall.
+ */
 export function ReceiptDocument({
   booking,
   shopName,
+  height,
 }: {
   booking: SerializedBooking;
   shopName: string;
+  height?: number;
 }) {
   return (
     <Document>
-      <Page size={[PAGE_WIDTH, estimateHeight(booking)]} style={styles.page}>
+      <Page
+        size={[PAGE_WIDTH, height ?? estimateHeight(booking)]}
+        style={styles.page}
+      >
         <ReceiptBody booking={booking} shopName={shopName} />
       </Page>
     </Document>

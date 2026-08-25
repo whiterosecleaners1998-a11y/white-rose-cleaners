@@ -50,11 +50,16 @@ async function minHeight(booking) {
 
 const SHORT = "Shirt";
 const LONG = "Three Piece Suit - Dry Clean and Press";
+// Long enough to wrap. Cases built only from names that fit on one line are
+// what let a wrapping bug through: the estimator's wrap terms never ran.
+const WRAPPING = "Curtains per Panel (Heavy Lined, Velvet) - Dry Clean Only";
+const LONG_NAME = "Muhammad Sabih Ul Ebad Khan S/O Abdul Rehman Khan";
+const LONG_NOTE = "Kindly ensure the embroidered dupatta receives delicate handling throughout, particularly around the sequinned borders, and please telephone beforehand.";
 
-function booking({ n, name = SHORT, notes = null, paidAmount = 0 }) {
+function booking({ n, name = SHORT, notes = null, paidAmount = 0, customerName = "Muhammad Sabih Ul Ebad" }) {
   return {
     id: "x", bookingCode: "WRD-00009",
-    customerName: "Muhammad Sabih Ul Ebad",
+    customerName,
     phone: "03001234567", status: "RECEIVED",
     totalAmount: 385 * n, notes,
     paidAmount, remainingAmount: 385 * n - paidAmount,
@@ -78,6 +83,15 @@ const CASES = [
   ["8 short part-paid", booking({ n: 8, paidAmount: 500 })],
   ["8 short + notes", booking({ n: 8, notes: "Handle the silk scarf gently and use extra starch on the collars please." })],
   ["20 long + notes", booking({ n: 20, name: LONG, notes: "Handle the silk scarf gently and use extra starch on the collars please. Ring before delivery." })],
+  ["1 wrapping", booking({ n: 1, name: WRAPPING })],
+  ["8 wrapping", booking({ n: 8, name: WRAPPING })],
+  ["20 wrapping", booking({ n: 20, name: WRAPPING })],
+  ["long name", booking({ n: 1, customerName: LONG_NAME })],
+  ["long name + 8 short", booking({ n: 8, customerName: LONG_NAME })],
+  ["long note", booking({ n: 1, notes: LONG_NOTE })],
+  ["long note twice", booking({ n: 1, notes: LONG_NOTE + " " + LONG_NOTE })],
+  ["long name + long note", booking({ n: 1, customerName: LONG_NAME, notes: LONG_NOTE })],
+  ["everything long", booking({ n: 12, name: WRAPPING, customerName: LONG_NAME, notes: LONG_NOTE, paidAmount: 500 })],
 ];
 
 let worstShortfall = 0, worstSlack = 0, failures = 0;
