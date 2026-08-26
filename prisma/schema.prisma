@@ -64,6 +64,11 @@ model Bundle {
   name      String       @unique
   active    Boolean      @default(true)
   sortOrder Int          @default(0)
+  // The keyboard key the shop chose for this bundle on the booking form. Null
+  // means it takes whichever spare home-row letter is going. Uniqueness is
+  // enforced among active bundles in the API rather than by the database, so a
+  // removed bundle never keeps a letter hostage.
+  shortcut  String?
   items     BundleItem[]
 }
 

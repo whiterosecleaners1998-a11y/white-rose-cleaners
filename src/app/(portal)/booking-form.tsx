@@ -28,6 +28,7 @@ import {
   ownerNewBookingMessage,
 } from "@/lib/whatsapp-messages";
 import { openReceiptPdf, isPrintShortcut } from "@/lib/print-receipt";
+import { ITEM_KEYS, resolveBundleKeys } from "@/lib/shortcuts";
 
 type PriceItem = {
   id: string;
@@ -45,6 +46,8 @@ type BundleLine = {
 type Bundle = {
   id: string;
   name: string;
+  /** The key the shop chose for it, if any. See resolveBundleKeys. */
+  shortcut?: string | null;
   items: BundleLine[];
 };
 
@@ -52,16 +55,6 @@ type CartLine = {
   id: string;
   quantity: number;
 };
-
-// Keys 1-9 then 0 address the first ten items on screen, so the operator can
-// book a whole order from the number row without reaching for the mouse.
-// Position follows the price list's own order (sortOrder, then name), so the
-// digits stay put unless the Price List page is reordered.
-const SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-
-// Bundles take home-row letters so they never fight the item digits, which
-// means both tabs stay reachable from the keyboard without switching tabs.
-const BUNDLE_KEYS = ["a", "s", "d", "f", "g", "h", "j", "k", "l"];
 
 // "1", or "1-9" — never advertises a key that has nothing behind it.
 function keyRange(keys: string[], count: number): string | null {
@@ -141,7 +134,7 @@ export default function BookingForm({
 
   // "1", or "1-9" — only as wide as the items currently on screen.
   const shortcutRange = useMemo(
-    () => keyRange(SHORTCUT_KEYS, visibleItems.length),
+    () => keyRange(ITEM_KEYS, visibleItems.length),
     [visibleItems.length],
   );
 
@@ -203,10 +196,21 @@ export default function BookingForm({
     );
   }, [usableBundles, search]);
 
-  const bundleRange = useMemo(
-    () => keyRange(BUNDLE_KEYS, visibleBundles.length),
-    [visibleBundles.length],
+  // Keyed off every usable bundle rather than the ones a search has left on
+  // screen, so a letter always means the same bundle.
+  const bundleKeys = useMemo(
+    () => resolveBundleKeys(usableBundles),
+    [usableBundles],
   );
+
+  const bundleByKey = useMemo(() => {
+    const map = new Map<string, Bundle>();
+    for (const bundle of usableBundles) {
+      const key = bundleKeys.get(bundle.id);
+      if (key) map.set(key, bundle);
+    }
+    return map;
+  }, [usableBundles, bundleKeys]);
 
   const addOne = useCallback((item: PriceItem) => {
     setError(null);
@@ -266,16 +270,14 @@ export default function BookingForm({
 
       const key = event.key.toLowerCase();
 
-      const bundleIndex = BUNDLE_KEYS.indexOf(key);
-      const bundle =
-        bundleIndex === -1 ? undefined : visibleBundles[bundleIndex];
+      const bundle = bundleByKey.get(key);
       if (bundle) {
         event.preventDefault();
         addBundle(bundle);
         return;
       }
 
-      const index = SHORTCUT_KEYS.indexOf(key);
+      const index = ITEM_KEYS.indexOf(key);
       const item = index === -1 ? undefined : visibleItems[index];
       if (!item) return;
       event.preventDefault();
@@ -284,7 +286,7 @@ export default function BookingForm({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [addBundle, addOne, result, submitting, visibleBundles, visibleItems]);
+  }, [addBundle, addOne, bundleByKey, result, submitting, visibleItems]);
 
   // The item shortcuts above stand down once a booking is saved, which is
   // exactly when the operator wants the receipt. P takes over on that screen.
@@ -540,7 +542,7 @@ export default function BookingForm({
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {visibleItems.map((item, index) => {
                   const inCart = quantityById.get(item.id) ?? 0;
-                  const shortcut = SHORTCUT_KEYS[index];
+                  const shortcut = ITEM_KEYS[index];
                   return (
                     <button
                       key={item.id}
@@ -591,8 +593,8 @@ export default function BookingForm({
             />
           ) : (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-              {visibleBundles.map((bundle, index) => {
-                const shortcut = BUNDLE_KEYS[index];
+              {visibleBundles.map((bundle) => {
+                const shortcut = bundleKeys.get(bundle.id);
                 const bundleTotal = bundle.items.reduce(
                   (sum, line) => sum + line.price * line.quantity,
                   0,
@@ -638,7 +640,7 @@ export default function BookingForm({
           )}
         </div>
 
-        {(shortcutRange || bundleRange) && (
+        {(shortcutRange || bundleKeys.size > 0) && (
           <p className="text-xs text-muted-foreground">
             Press{" "}
             {shortcutRange && (
@@ -649,15 +651,8 @@ export default function BookingForm({
                 for an item
               </>
             )}
-            {shortcutRange && bundleRange && ", or "}
-            {bundleRange && (
-              <>
-                <kbd className="rounded border bg-muted px-1 font-mono text-[11px] uppercase">
-                  {bundleRange}
-                </kbd>{" "}
-                for a bundle
-              </>
-            )}
+            {shortcutRange && bundleKeys.size > 0 && ", or "}
+            {bundleKeys.size > 0 && "a bundle's own letter"}
             {
               " — either tab, no need to switch. While typing in a field, press "
             }

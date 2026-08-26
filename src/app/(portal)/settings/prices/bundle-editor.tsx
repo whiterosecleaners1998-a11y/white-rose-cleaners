@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { normalizeShortcut, resolveBundleKeys } from "@/lib/shortcuts";
 
 type PriceItem = {
   id: string;
@@ -28,8 +29,59 @@ type PriceItem = {
 type Bundle = {
   id: string;
   name: string;
+  shortcut?: string | null;
   items: { itemId: string; name: string; price: number; quantity: number }[];
 };
+
+/**
+ * The key field on a bundle row. Shows the letter the bundle actually answers
+ * to on the booking form, whether that was chosen here or handed out
+ * automatically, and only saves once the letter has changed.
+ */
+function ShortcutField({
+  bundle,
+  effectiveKey,
+  onSave,
+}: {
+  bundle: Bundle;
+  effectiveKey: string | undefined;
+  onSave: (key: string) => Promise<boolean>;
+}) {
+  const chosen = bundle.shortcut ?? "";
+  const [draft, setDraft] = useState(chosen);
+
+  async function commit() {
+    const next = normalizeShortcut(draft) ?? "";
+    // A typo, or the same letter back again: show what is stored and stop.
+    if (next === chosen) {
+      setDraft(chosen);
+      return;
+    }
+    // A letter another bundle already holds is refused, so snap back to the
+    // one this bundle kept.
+    setDraft((await onSave(next)) ? next : chosen);
+  }
+
+  return (
+    <Input
+      value={draft.toUpperCase()}
+      aria-label={`Keyboard shortcut for ${bundle.name}`}
+      maxLength={1}
+      placeholder={effectiveKey ? effectiveKey.toUpperCase() : "—"}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.currentTarget.blur();
+        }
+      }}
+      className={`h-9 w-11 text-center font-mono uppercase ${
+        bundle.shortcut ? "" : "placeholder:text-muted-foreground/60"
+      }`}
+    />
+  );
+}
 
 export default function BundleEditor({
   items,
@@ -41,6 +93,7 @@ export default function BundleEditor({
   const router = useRouter();
   const [bundles, setBundles] = useState(initialBundles);
   const [name, setName] = useState("");
+  const [shortcut, setShortcut] = useState("");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -58,6 +111,37 @@ export default function BundleEditor({
       chosen.reduce((sum, line) => sum + line.item.price * line.quantity, 0),
     [chosen]
   );
+
+  // What each bundle actually answers to on the booking form — the chosen
+  // letter, or the spare one it was handed. Shown so the shop can see the
+  // automatic assignment before deciding to override it.
+  const bundleKeys = useMemo(() => resolveBundleKeys(bundles), [bundles]);
+
+  async function saveShortcut(id: string, key: string): Promise<boolean> {
+    const res = await fetch(`/api/bundles/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shortcut: key }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      // Leaves the stored value untouched, which snaps the field back.
+      toast.error(data.error ?? "Could not set that shortcut.");
+      return false;
+    }
+    setBundles((prev) =>
+      prev.map((bundle) =>
+        bundle.id === id ? { ...bundle, shortcut: data.shortcut } : bundle
+      )
+    );
+    toast.success(
+      key
+        ? `${data.name} now answers to ${key.toUpperCase()}.`
+        : `${data.name} is back on an automatic letter.`
+    );
+    router.refresh();
+    return true;
+  }
 
   function setQuantity(id: string, quantity: number) {
     setQuantities((prev) => ({ ...prev, [id]: Math.max(0, quantity) }));
@@ -83,6 +167,7 @@ export default function BundleEditor({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
+          shortcut: shortcut.trim(),
           items: chosen.map((line) => ({
             itemId: line.item.id,
             quantity: line.quantity,
@@ -96,6 +181,7 @@ export default function BundleEditor({
       }
       setBundles((prev) => [...prev, data]);
       setName("");
+      setShortcut("");
       setQuantities({});
       toast.success(`Bundle "${data.name}" created.`);
       router.refresh();
@@ -132,6 +218,10 @@ export default function BundleEditor({
         </p>
       ) : (
         <ul className="divide-y rounded-lg border">
+          <li className="flex items-center justify-between gap-3 bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground">
+            <span>Bundle</span>
+            <span className="shrink-0 pr-11">Key</span>
+          </li>
           {bundles.map((bundle) => (
             <li
               key={bundle.id}
@@ -151,6 +241,11 @@ export default function BundleEditor({
                     .reduce((sum, line) => sum + line.price * line.quantity, 0)
                     .toFixed(2)}
                 </span>
+                <ShortcutField
+                  bundle={bundle}
+                  effectiveKey={bundleKeys.get(bundle.id)}
+                  onSave={(key) => saveShortcut(bundle.id, key)}
+                />
                 <AlertDialog>
                   <AlertDialogTrigger
                     render={<Button variant="ghost" size="icon-sm" />}
@@ -185,16 +280,34 @@ export default function BundleEditor({
         onSubmit={createBundle}
         className="space-y-4 rounded-lg border bg-muted/30 p-4"
       >
-        <div className="grid gap-1.5">
-          <Label htmlFor="bundleName">Bundle name</Label>
-          <Input
-            id="bundleName"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Suit"
-            className="w-full sm:w-56"
-          />
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="grid gap-1.5">
+            <Label htmlFor="bundleName">Bundle name</Label>
+            <Input
+              id="bundleName"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Suit"
+              className="w-full sm:w-56"
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="bundleKey">Key</Label>
+            <Input
+              id="bundleKey"
+              value={shortcut.toUpperCase()}
+              onChange={(e) => setShortcut(e.target.value)}
+              maxLength={1}
+              placeholder="—"
+              className="w-11 text-center font-mono uppercase"
+            />
+          </div>
         </div>
+        <p className="-mt-2 text-xs text-muted-foreground">
+          One letter, pressed on the booking form to drop the whole bundle in.
+          Leave it empty and a spare one is handed out. Digits are spoken for —
+          they book price list items.
+        </p>
 
         <div className="grid gap-1.5">
           <Label>How many of each item?</Label>

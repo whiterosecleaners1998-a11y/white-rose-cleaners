@@ -1,33 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-
-// A bundle is stored as a name plus the price list lines it expands to, so the
-// booking form can drop every line into the cart in one press.
-const bundleInclude = {
-  items: {
-    include: { item: true },
-    orderBy: { item: { sortOrder: "asc" } },
-  },
-} as const;
-
-type BundleWithItems = Awaited<
-  ReturnType<typeof prisma.bundle.findMany<{ include: typeof bundleInclude }>>
->[number];
-
-export function serializeBundle(bundle: BundleWithItems) {
-  return {
-    id: bundle.id,
-    name: bundle.name,
-    sortOrder: bundle.sortOrder,
-    items: bundle.items.map((line) => ({
-      itemId: line.itemId,
-      name: line.item.name,
-      price: Number(line.item.price),
-      quantity: line.quantity,
-    })),
-  };
-}
+import { normalizeShortcut } from "@/lib/shortcuts";
+import { bundleInclude, serializeBundle } from "@/lib/bundles";
 
 export async function GET() {
   const bundles = await prisma.bundle.findMany({
@@ -40,6 +15,8 @@ export async function GET() {
 
 const createSchema = z.object({
   name: z.string().trim().min(1).max(100),
+  // Optional: a blank one means "hand it a spare letter".
+  shortcut: z.string().trim().max(1).optional(),
   items: z
     .array(
       z.object({
@@ -61,6 +38,13 @@ export async function POST(request: NextRequest) {
   }
 
   const { name, items } = parsed.data;
+  const shortcut = normalizeShortcut(parsed.data.shortcut);
+  if (parsed.data.shortcut && !shortcut) {
+    return NextResponse.json(
+      { error: "A shortcut has to be a single letter." },
+      { status: 400 }
+    );
+  }
 
   // Reject unknown or removed items up front rather than letting the foreign
   // key fail with an opaque 500.
@@ -73,6 +57,19 @@ export async function POST(request: NextRequest) {
       { error: "One of those items is no longer on the price list." },
       { status: 400 }
     );
+  }
+
+  if (shortcut) {
+    const clash = await prisma.bundle.findFirst({
+      where: { active: true, shortcut, name: { not: name } },
+      select: { name: true },
+    });
+    if (clash) {
+      return NextResponse.json(
+        { error: `"${clash.name}" already uses ${shortcut.toUpperCase()}.` },
+        { status: 409 }
+      );
+    }
   }
 
   const existing = await prisma.bundle.findUnique({ where: { name } });
@@ -88,6 +85,7 @@ export async function POST(request: NextRequest) {
     name,
     active: true,
     sortOrder: count,
+    shortcut,
     items: {
       create: items.map((line) => ({
         itemId: line.itemId,

@@ -62,6 +62,7 @@ export default async function PricesPage() {
             initialBundles={bundles.map((bundle) => ({
               id: bundle.id,
               name: bundle.name,
+              shortcut: bundle.shortcut,
               items: bundle.items
                 .filter((line) => line.item.active)
                 .map((line) => ({
