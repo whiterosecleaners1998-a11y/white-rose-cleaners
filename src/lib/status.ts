@@ -8,10 +8,15 @@ export const statusBadgeClass: Record<string, string> = {
     "rounded-full border-0 bg-blue-100 px-2.5 font-medium text-blue-800 dark:bg-blue-500/15 dark:text-blue-400",
   DELIVERED:
     "rounded-full border-0 bg-green-100 px-2.5 font-medium text-green-800 dark:bg-green-500/15 dark:text-green-400",
+  // Slate, not red: a cancelled order is void, not an error worth alarming
+  // anyone about. It should read as struck off the book.
+  CANCELLED:
+    "rounded-full border-0 bg-slate-200 px-2.5 font-medium text-slate-600 line-through dark:bg-slate-500/20 dark:text-slate-400",
 };
 
 export const statusLabel: Record<string, string> = {
   RECEIVED: "Received",
   READY: "Ready",
   DELIVERED: "Delivered",
+  CANCELLED: "Cancelled",
 };

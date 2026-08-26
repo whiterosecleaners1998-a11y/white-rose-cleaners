@@ -13,6 +13,10 @@ enum BookingStatus {
   RECEIVED
   READY
   DELIVERED
+  // Voided rather than erased: the row keeps its booking number so a customer
+  // turning up with an old receipt still finds it, but it drops out of the
+  // orders list and every revenue figure. Reversible.
+  CANCELLED
 }
 
 model Booking {
@@ -30,6 +34,7 @@ model Booking {
   createdAt             DateTime      @default(now())
   readyAt               DateTime?
   deliveredAt           DateTime?
+  cancelledAt           DateTime?
   confirmationSmsSentAt DateTime?
   readySmsSentAt        DateTime?
   items                 BookingItem[]

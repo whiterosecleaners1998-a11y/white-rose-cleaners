@@ -28,7 +28,7 @@ type Booking = {
   bookingCode: string;
   customerName: string;
   phone: string;
-  status: "RECEIVED" | "READY" | "DELIVERED";
+  status: "RECEIVED" | "READY" | "DELIVERED" | "CANCELLED";
   totalAmount: number;
   createdAt: string;
 };

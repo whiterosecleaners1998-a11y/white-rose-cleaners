@@ -4,7 +4,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { statusLabel } from "@/lib/status";
 import { cn } from "@/lib/utils";
 
-const PILLS = ["ALL", "RECEIVED", "READY", "DELIVERED"] as const;
+// "All" means the live order book. Cancelled orders are void and stay out of
+// it, so they get their own pill rather than being folded into the default.
+const PILLS = ["ALL", "RECEIVED", "READY", "DELIVERED", "CANCELLED"] as const;
 
 /**
  * The status filter as a pill row. It writes the same `status` search param the

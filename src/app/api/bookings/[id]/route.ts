@@ -22,7 +22,7 @@ export async function GET(
 // PATCH just their own field, but a body carrying neither is a mistake.
 const updateSchema = z
   .object({
-    status: z.enum(["RECEIVED", "READY", "DELIVERED"]),
+    status: z.enum(["RECEIVED", "READY", "DELIVERED", "CANCELLED"]),
     paidAmount: z.number().nonnegative(),
   })
   .partial()
@@ -48,9 +48,10 @@ export async function PATCH(
 
   const now = new Date();
   const data: {
-    status?: "RECEIVED" | "READY" | "DELIVERED";
+    status?: "RECEIVED" | "READY" | "DELIVERED" | "CANCELLED";
     readyAt?: Date;
     deliveredAt?: Date;
+    cancelledAt?: Date | null;
     paidAmount?: number;
   } = {};
 
@@ -59,6 +60,10 @@ export async function PATCH(
     if (parsed.data.status === "READY" && !existing.readyAt) data.readyAt = now;
     if (parsed.data.status === "DELIVERED" && !existing.deliveredAt)
       data.deliveredAt = now;
+    // Stamped on the way in and cleared on the way out, so an un-cancelled
+    // booking carries no trace of having been voided.
+    if (parsed.data.status === "CANCELLED") data.cancelledAt = now;
+    else if (existing.cancelledAt) data.cancelledAt = null;
   }
 
   if (parsed.data.paidAmount !== undefined) {
@@ -76,4 +81,26 @@ export async function PATCH(
   });
 
   return NextResponse.json(serializeBooking(booking));
+}
+
+/**
+ * Erases a booking outright — its items go with it through the schema's
+ * cascade, and its booking number is never reissued, leaving a gap in the
+ * sequence. Meant for bookings that should never have existed: duplicates,
+ * test entries, a wrong customer. To void a real order while keeping the
+ * record, PATCH it to CANCELLED instead.
+ */
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const deleted = await prisma.booking
+    .delete({ where: { id }, select: { bookingNumber: true } })
+    .catch(() => null);
+
+  if (!deleted) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  return NextResponse.json({ ok: true, bookingNumber: deleted.bookingNumber });
 }

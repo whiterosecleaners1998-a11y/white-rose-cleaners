@@ -11,6 +11,10 @@ export type OrderStats = {
   outstanding: number;
 };
 
+// A cancelled booking is void: it counts for nothing and is owed nothing, so
+// every figure here is taken over the live order book only.
+const LIVE = { status: { not: "CANCELLED" } } as const;
+
 function startOfToday(): Date {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
@@ -27,20 +31,25 @@ export async function getOrderStats(): Promise<OrderStats> {
 
   const [byStatus, total, deliveredToday, todayRevenue, allTime, owed] =
     await Promise.all([
-      prisma.booking.groupBy({ by: ["status"], _count: { _all: true } }),
-      prisma.booking.count(),
+      prisma.booking.groupBy({
+        by: ["status"],
+        _count: { _all: true },
+        where: LIVE,
+      }),
+      prisma.booking.count({ where: LIVE }),
       prisma.booking.count({
         where: { status: "DELIVERED", deliveredAt: { gte: today } },
       }),
       prisma.booking.aggregate({
         _sum: { totalAmount: true },
-        where: { createdAt: { gte: today } },
+        where: { ...LIVE, createdAt: { gte: today } },
       }),
-      prisma.booking.aggregate({ _avg: { totalAmount: true } }),
+      prisma.booking.aggregate({ _avg: { totalAmount: true }, where: LIVE }),
       // Everything still owed across the shop, not just today - an unpaid
       // order from last week is money outstanding all the same.
       prisma.booking.aggregate({
         _sum: { totalAmount: true, paidAmount: true },
+        where: LIVE,
       }),
     ]);
 

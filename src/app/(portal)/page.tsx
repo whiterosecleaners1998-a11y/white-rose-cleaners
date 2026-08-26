@@ -47,6 +47,9 @@ async function getBundles() {
 
 async function getRecentBookings() {
   const bookings = await prisma.booking.findMany({
+    // Cancelled orders are void — they belong in a phone search, not on the
+    // counter's at-a-glance list.
+    where: { status: { not: "CANCELLED" } },
     include: { items: true },
     orderBy: { createdAt: "desc" },
     take: 10,

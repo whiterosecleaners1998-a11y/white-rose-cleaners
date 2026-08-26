@@ -1,7 +1,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import { phoneSearchKey } from "@/lib/phone";
 
-const STATUSES = ["RECEIVED", "READY", "DELIVERED"] as const;
+const STATUSES = ["RECEIVED", "READY", "DELIVERED", "CANCELLED"] as const;
 
 export function buildOrdersWhere(
   searchParams: URLSearchParams
@@ -13,8 +13,12 @@ export function buildOrdersWhere(
 
   const where: Prisma.BookingWhereInput = {};
 
+  // Cancelled orders are voided, not deleted, so they stay out of the table
+  // unless asked for by name. Everything else means "the live order book".
   if (status && (STATUSES as readonly string[]).includes(status)) {
     where.status = status as (typeof STATUSES)[number];
+  } else {
+    where.status = { not: "CANCELLED" };
   }
 
   if (from || to) {

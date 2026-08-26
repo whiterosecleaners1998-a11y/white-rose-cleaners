@@ -2,11 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Printer, Download, MessageCircle, Wallet } from "lucide-react";
+import {
+  Printer,
+  Download,
+  MessageCircle,
+  Wallet,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -22,10 +29,21 @@ import {
   orderReceivedMessage,
   orderReadyMessage,
 } from "@/lib/whatsapp-messages";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
-type Status = "RECEIVED" | "READY" | "DELIVERED";
+type Status = "RECEIVED" | "READY" | "DELIVERED" | "CANCELLED";
 
-const STATUSES: Status[] = ["RECEIVED", "READY", "DELIVERED"];
+const STATUSES: Status[] = ["RECEIVED", "READY", "DELIVERED", "CANCELLED"];
 
 export default function BookingActions({
   id,
@@ -76,7 +94,9 @@ export default function BookingActions({
   // Which message fits depends on where the order is. Delivered orders get
   // none — there is nothing left to tell the customer.
   const customerMessage =
-    current === "RECEIVED"
+    current === "CANCELLED"
+      ? null
+      : current === "RECEIVED"
       ? orderReceivedMessage({
           customerName,
           bookingCode,
@@ -116,7 +136,11 @@ export default function BookingActions({
       toast.success(
         next === "READY"
           ? "Marked ready — tap below to message the customer."
-          : `Status set to ${statusLabel[next]}.`
+          : next === "CANCELLED"
+            ? "Booking cancelled. It keeps its number and stays searchable."
+            : current === "CANCELLED"
+              ? `Booking restored — back to ${statusLabel[next]}.`
+              : `Status set to ${statusLabel[next]}.`
       );
       router.refresh();
     } catch (error) {
@@ -124,6 +148,24 @@ export default function BookingActions({
         error instanceof Error ? error.message : "Failed to update status"
       );
     } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteBooking() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/bookings/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Delete failed");
+      toast.success(`Booking ${bookingCode} deleted.`);
+      // Nothing left to show on this page.
+      router.push("/orders");
+      router.refresh();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete booking"
+      );
       setLoading(false);
     }
   }
@@ -152,80 +194,91 @@ export default function BookingActions({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-4 print:hidden">
-      <div className="flex items-center gap-2">
-        <Label className="text-sm text-muted-foreground">Status</Label>
-        <Select
-          value={current}
-          onValueChange={(value) => changeStatus(value as Status)}
-          disabled={loading}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {statusLabel[s]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Label className="text-sm text-muted-foreground" htmlFor="paid-amount">
-          Paid
-        </Label>
-        {/* The base Input is h-10 with a larger type scale, built for form
-            fields rather than a toolbar; bring it down to the button height so
-            it lines up with the select and the buttons beside it. */}
-        <Input
-          id="paid-amount"
-          type="number"
-          min={0}
-          max={totalAmount}
-          step="0.01"
-          inputMode="decimal"
-          value={paidInput}
-          onChange={(event) => setPaidInput(event.target.value)}
-          disabled={savingPayment}
-          className="h-8 w-24 px-2.5 text-sm tabular-nums"
-        />
-        <span className="text-sm tabular-nums text-muted-foreground">
-          of {totalAmount.toFixed(2)}
-        </span>
-        {paidChanged && (
-          <Button
-            variant="outline"
-            onClick={() => savePayment(typedPaid)}
-            disabled={savingPayment}
+    <div className="rounded-xl border bg-card shadow-xs print:hidden">
+      {/* Two zones rather than one long row: what is true about the order,
+          then what can be done with it. Each control gets a label above it so
+          nothing has to compete for width with its own caption. */}
+      <div className="flex flex-wrap items-start gap-x-10 gap-y-5 p-4 sm:p-5">
+        <div className="grid gap-1.5">
+          <FieldLabel>Status</FieldLabel>
+          <Select
+            value={current}
+            onValueChange={(value) => changeStatus(value as Status)}
+            disabled={loading}
           >
-            Save
-          </Button>
-        )}
-        {remaining > 0 ? (
-          <>
-            <PaymentPill tone="due">Balance {remaining.toFixed(2)}</PaymentPill>
-            {/* Hidden while an edit is pending so the two buttons cannot
-                disagree about what is about to be saved. */}
-            {!paidChanged && (
+            <SelectTrigger className="w-40">
+              {/* Base UI renders the raw value unless told otherwise, which
+                  puts a shouty RECEIVED next to the Received badge below. */}
+              <SelectValue>
+                {(value) => statusLabel[value as string] ?? String(value)}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {statusLabel[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid gap-1.5">
+          <FieldLabel htmlFor="paid-amount">Payment</FieldLabel>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* The base Input is h-10 with a larger type scale, built for form
+                fields rather than a toolbar; bring it down to the select's
+                height so the row sits on one line. */}
+            <Input
+              id="paid-amount"
+              type="number"
+              min={0}
+              max={totalAmount}
+              step="0.01"
+              inputMode="decimal"
+              value={paidInput}
+              onChange={(event) => setPaidInput(event.target.value)}
+              disabled={savingPayment}
+              className="h-9 w-24 px-2.5 text-sm tabular-nums"
+            />
+            <span className="text-sm tabular-nums text-muted-foreground">
+              of {totalAmount.toFixed(2)}
+            </span>
+            {paidChanged ? (
+              // Hidden while an edit is pending so the two buttons cannot
+              // disagree about what is about to be saved.
               <Button
-                variant="outline"
-                onClick={() => savePayment(totalAmount)}
+                size="sm"
+                onClick={() => savePayment(typedPaid)}
                 disabled={savingPayment}
               >
-                <Wallet />
-                Mark paid
+                Save
               </Button>
+            ) : remaining > 0 ? (
+              <>
+                <PaymentPill tone="due">
+                  Balance {remaining.toFixed(2)}
+                </PaymentPill>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => savePayment(totalAmount)}
+                  disabled={savingPayment}
+                >
+                  <Wallet />
+                  Mark paid
+                </Button>
+              </>
+            ) : (
+              <PaymentPill tone="settled">Paid in full</PaymentPill>
             )}
-          </>
-        ) : (
-          <PaymentPill tone="settled">Paid in full</PaymentPill>
-        )}
+          </div>
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <Separator />
+
+      <div className="flex flex-wrap items-center gap-2 p-4 sm:px-5 sm:py-4">
         {customerMessage && (
           <Button
             render={
@@ -237,7 +290,9 @@ export default function BookingActions({
             }
           >
             <MessageCircle />
-            {current === "READY" ? "Send Ready Message" : "Send Received Message"}
+            {current === "READY"
+              ? "Send Ready Message"
+              : "Send Received Message"}
           </Button>
         )}
         <Button variant="outline" onClick={printReceiptSheet}>
@@ -247,12 +302,68 @@ export default function BookingActions({
             P
           </kbd>
         </Button>
-        <Button variant="outline" render={<a href={`/api/bookings/${id}/pdf`} />}>
+        <Button
+          variant="outline"
+          render={<a href={`/api/bookings/${id}/pdf`} />}
+        >
           <Download />
           Download PDF
         </Button>
+
+        {/* Erasing is for bookings that should never have existed. Cancelling
+            covers a real order that fell through, so this sits away from the
+            everyday buttons, stays quiet until hovered, and asks first. */}
+        <AlertDialog>
+          <AlertDialogTrigger
+            render={
+              <Button
+                variant="ghost"
+                disabled={loading}
+                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:ml-auto"
+              />
+            }
+          >
+            <Trash2 />
+            Delete
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete booking {bookingCode}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This erases {customerName}&apos;s order and its items for good,
+                and the number is never reissued. There is no undo.
+                {current !== "CANCELLED" &&
+                  " To void a real order but keep the record, set its status to Cancelled instead."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep it</AlertDialogCancel>
+              <AlertDialogAction onClick={deleteBooking}>
+                Delete for good
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
+  );
+}
+
+/** Small caps caption above a control, so labels stop eating row width. */
+function FieldLabel({
+  htmlFor,
+  children,
+}: {
+  htmlFor?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Label
+      htmlFor={htmlFor}
+      className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase"
+    >
+      {children}
+    </Label>
   );
 }
 
