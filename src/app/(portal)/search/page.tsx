@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Search as SearchIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/phone-input";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -41,12 +41,12 @@ export default function SearchPage() {
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    if (!phone.trim()) return;
+    if (!phone) return;
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(
-        `/api/bookings?phone=${encodeURIComponent(phone.trim())}`
+        `/api/bookings?phone=${encodeURIComponent(phone)}`
       );
       if (!res.ok) {
         setError("Search failed");
@@ -68,10 +68,10 @@ export default function SearchPage() {
       </CardHeader>
       <CardContent className="space-y-5">
         <form onSubmit={handleSearch} className="flex max-w-sm gap-2">
-          <Input
+          <PhoneInput
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="e.g. 0300 1234567"
+            onValueChange={setPhone}
+            className="flex-1"
           />
           <Button type="submit" disabled={loading}>
             <SearchIcon />

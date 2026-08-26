@@ -1,5 +1,5 @@
 import { Prisma } from "@/generated/prisma/client";
-import { normalizePhone } from "@/lib/phone";
+import { phoneSearchKey } from "@/lib/phone";
 
 const STATUSES = ["RECEIVED", "READY", "DELIVERED"] as const;
 
@@ -25,7 +25,7 @@ export function buildOrdersWhere(
   }
 
   if (q) {
-    const normalizedPhone = normalizePhone(q);
+    const normalizedPhone = phoneSearchKey(q);
     const bookingNumberMatch = q.match(/(\d+)\s*$/);
     const bookingNumber = bookingNumberMatch
       ? Number(bookingNumberMatch[1])

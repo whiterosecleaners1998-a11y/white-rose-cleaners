@@ -21,6 +21,8 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { balanceOf } from "@/lib/money";
 import { buildWhatsAppLink } from "@/lib/whatsapp-link";
+import { PhoneInput } from "@/components/phone-input";
+import { toInternationalPhone } from "@/lib/phone";
 import {
   orderReceivedMessage,
   ownerNewBookingMessage,
@@ -320,8 +322,12 @@ export default function BookingForm({
       setError("Add at least one item.");
       return;
     }
-    if (!customerName.trim() || !phone.trim()) {
+    if (!customerName.trim() || !phone) {
       setError("Customer name and phone number are required.");
+      return;
+    }
+    if (phone.length < 9) {
+      setError("That phone number looks too short.");
       return;
     }
 
@@ -332,7 +338,7 @@ export default function BookingForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerName,
-          phone,
+          phone: toInternationalPhone(phone),
           notes: notes || undefined,
           paidAmount: advanceAmount,
           items: lines.map((line) => ({
@@ -461,11 +467,10 @@ export default function BookingForm({
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="phone">Phone number</Label>
-          <Input
+          <PhoneInput
             id="phone"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+92 300 1234567"
+            onValueChange={setPhone}
           />
         </div>
       </div>

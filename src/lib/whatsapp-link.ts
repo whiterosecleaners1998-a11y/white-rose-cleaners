@@ -3,18 +3,16 @@
  * Opening this link launches WhatsApp with the message already typed —
  * the person still has to tap Send themselves. No API, no setup.
  */
+import { COUNTRY_DIAL_CODE, nationalPhoneDigits } from "@/lib/phone";
 
 /**
- * wa.me needs a full international number as bare digits. Customer phones are
- * stored the way they were typed (see normalizePhone), so a local "03001234567"
- * has to gain a country code and lose its trunk zero. Mirrors toWhatsAppAddress
- * in whatsapp.ts, which does the same for Twilio.
+ * wa.me needs a full international number as bare digits. New bookings are
+ * stored that way already, but numbers taken before the country code was fixed
+ * on the form are local ("03001234567"), so both are put through the same
+ * national-part extraction and given the country code back.
  */
 function toInternationalDigits(phone: string): string {
-  const trimmed = phone.trim();
-  if (trimmed.startsWith("+")) return trimmed.replace(/\D/g, "");
-  const countryCode = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY_CODE || "92";
-  return `${countryCode}${trimmed.replace(/\D/g, "").replace(/^0/, "")}`;
+  return `${COUNTRY_DIAL_CODE}${nationalPhoneDigits(phone)}`;
 }
 
 export function buildWhatsAppLink(phone: string, message: string): string {

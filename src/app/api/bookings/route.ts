@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { normalizePhone } from "@/lib/phone";
+import { phoneSearchKey, toInternationalPhone } from "@/lib/phone";
 import { serializeBooking } from "@/lib/serialize";
 import { originFromHeaders } from "@/lib/origin";
 import { buildReceiptUrl } from "@/lib/receipt-link";
@@ -12,10 +12,10 @@ export async function GET(request: NextRequest) {
 
   let where;
   if (phoneParam) {
-    const normalized = normalizePhone(phoneParam);
-    where = normalized ? { phone: { contains: normalized } } : { id: "" };
+    const key = phoneSearchKey(phoneParam);
+    where = key ? { phone: { contains: key } } : { id: "" };
   } else if (q) {
-    const normalizedPhone = normalizePhone(q);
+    const normalizedPhone = phoneSearchKey(q);
     const bookingNumber = bookingNumberFromQuery(q);
     where = {
       OR: [
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { customerName, phone, notes, items } = parsed.data;
-  const phoneNormalized = normalizePhone(phone);
+  const phoneNormalized = toInternationalPhone(phone);
   const totalAmount = items.reduce(
     (sum, item) => sum + item.unitPrice * item.quantity,
     0
