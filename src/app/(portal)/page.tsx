@@ -52,7 +52,10 @@ async function getRecentBookings() {
     where: { status: { not: "CANCELLED" } },
     include: { items: true },
     orderBy: { createdAt: "desc" },
-    take: 10,
+    // A window rather than the whole book: enough to page back through a few
+    // days at the counter without a round trip, while /orders stays the place
+    // to go for the full history.
+    take: 50,
   });
   return bookings.map(serializeBooking);
 }

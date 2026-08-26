@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { statusBadgeClass, statusLabel } from "@/lib/status";
+import { pageWindow } from "@/lib/pagination";
 
 type Booking = {
   id: string;
@@ -26,6 +27,8 @@ type Booking = {
   createdAt: string | Date;
 };
 
+const PAGE_SIZE = 10;
+
 export default function RecentBookings({
   initialBookings,
 }: {
@@ -34,10 +37,12 @@ export default function RecentBookings({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Booking[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function runSearch(trimmed: string) {
     setLoading(true);
+    setPage(1);
     fetch(`/api/bookings?q=${encodeURIComponent(trimmed)}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -48,6 +53,7 @@ export default function RecentBookings({
 
   function handleQueryChange(value: string) {
     setQuery(value);
+    setPage(1);
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     const trimmed = value.trim();
@@ -58,6 +64,7 @@ export default function RecentBookings({
 
   function clearQuery() {
     setQuery("");
+    setPage(1);
     if (debounceRef.current) clearTimeout(debounceRef.current);
   }
 
@@ -65,6 +72,16 @@ export default function RecentBookings({
     () => (query.trim() ? (results ?? initialBookings) : initialBookings),
     [query, results, initialBookings]
   );
+
+  // Paged in the browser rather than through the URL: this card shares the
+  // page with the booking form, and a navigation would remount it and throw
+  // away a half-built cart.
+  const pageCount = Math.max(1, Math.ceil(bookings.length / PAGE_SIZE));
+  const current = Math.min(page, pageCount);
+  const start = (current - 1) * PAGE_SIZE;
+  const visible = bookings.slice(start, start + PAGE_SIZE);
+  const firstRow = bookings.length === 0 ? 0 : start + 1;
+  const lastRow = Math.min(start + PAGE_SIZE, bookings.length);
 
   return (
     <div className="space-y-4">
@@ -109,7 +126,7 @@ export default function RecentBookings({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {bookings.map((b) => (
+            {visible.map((b) => (
               <TableRow key={b.id}>
                 <TableCell>
                   <Link
@@ -162,6 +179,65 @@ export default function RecentBookings({
             ))}
           </TableBody>
         </Table>
+      )}
+
+      {bookings.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+          <p className="text-xs text-muted-foreground">
+            Showing {firstRow.toLocaleString()}&ndash;{lastRow.toLocaleString()}{" "}
+            of {bookings.length.toLocaleString()} booking
+            {bookings.length === 1 ? "" : "s"}
+            {!query && (
+              <>
+                {" "}
+                &middot;{" "}
+                <Link href="/orders" className="underline hover:text-foreground">
+                  see every order
+                </Link>
+              </>
+            )}
+          </p>
+          {pageCount > 1 && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={current <= 1}
+                onClick={() => setPage(current - 1)}
+              >
+                Previous
+              </Button>
+              {pageWindow(current, pageCount).map((entry, i) =>
+                entry === "gap" ? (
+                  <span
+                    key={`gap-${i}`}
+                    className="px-1 text-xs text-muted-foreground"
+                  >
+                    &hellip;
+                  </span>
+                ) : (
+                  <Button
+                    key={entry}
+                    variant={entry === current ? "default" : "ghost"}
+                    size="sm"
+                    className="min-w-8 px-2 tabular-nums"
+                    onClick={() => setPage(entry)}
+                  >
+                    {entry}
+                  </Button>
+                )
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={current >= pageCount}
+                onClick={() => setPage(current + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
