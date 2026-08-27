@@ -87,3 +87,13 @@ model BundleItem {
 
   @@unique([bundleId, itemId])
 }
+
+// The shop password, once it has been changed from the APP_PASSWORD the app
+// was first handed. One row, keyed by a fixed id: only the scrypt hash is
+// stored, never the password itself, and until the first change the env var
+// stays the answer. See lib/password.ts.
+model ShopCredential {
+  id           String   @id
+  passwordHash String
+  updatedAt    DateTime @updatedAt
+}

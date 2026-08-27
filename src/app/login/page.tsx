@@ -17,7 +17,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 // Routes a signed-in user may be sent back to. Anything else — an off-site URL,
 // a protocol-relative "//evil.com", or a typo'd path like "/l" — falls back to "/"
 // so a successful login never lands on a 404 or leaves the site.
-const RETURNABLE_PATHS = ["/orders", "/search", "/settings/prices", "/bookings/"];
+const RETURNABLE_PATHS = [
+  "/orders",
+  "/search",
+  "/settings/prices",
+  "/settings/password",
+  "/bookings/",
+];
 
 function safeRedirectPath(raw: string | null): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/";

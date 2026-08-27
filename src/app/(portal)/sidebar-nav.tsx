@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, Search, SquarePen, Tags } from "lucide-react";
+import { ClipboardList, KeyRound, Search, SquarePen, Tags } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -24,7 +24,10 @@ const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
   },
   {
     heading: "Settings",
-    items: [{ href: "/settings/prices", label: "Price List", icon: Tags }],
+    items: [
+      { href: "/settings/prices", label: "Price List", icon: Tags },
+      { href: "/settings/password", label: "Password", icon: KeyRound },
+    ],
   },
 ];
 
