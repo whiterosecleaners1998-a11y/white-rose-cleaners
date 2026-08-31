@@ -9,10 +9,26 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import { PAYMENT_METHODS } from "@/lib/receipt-data";
+import { SHOP_LOGO } from "@/lib/shop";
 
-const LOGO_BUFFER = fs.readFileSync(
-  path.join(process.cwd(), "public", "white-rose-logo.png")
-);
+/**
+ * The shop's logo, whichever shape it takes. A file in public/ is read off the
+ * disk the way it always was; a full URL is handed to the renderer as-is, which
+ * fetches it. Anything missing or unreadable leaves the receipt without a logo
+ * rather than failing the whole PDF — a receipt with no crest still gets the
+ * customer their clothes back.
+ */
+const LOGO_SOURCE: Buffer | string | null = (() => {
+  if (!SHOP_LOGO) return null;
+  if (/^https?:\/\//.test(SHOP_LOGO)) return SHOP_LOGO;
+  try {
+    return fs.readFileSync(
+      path.join(process.cwd(), "public", SHOP_LOGO.replace(/^\//, ""))
+    );
+  } catch {
+    return null;
+  }
+})();
 const NEXIVO_BUFFER = fs.readFileSync(
   path.join(process.cwd(), "public", "nexivo-studio.png")
 );
@@ -144,8 +160,12 @@ const styles = StyleSheet.create({
   // The asset is a full lockup — monogram, shop name and "since" line — so it
   // is printed large enough to be read as the name. Setting the shop name in
   // type underneath it only said the same thing twice.
-  // Height derived from the asset's own 377x362 so the mark is never squashed.
-  logo: { width: 84, height: (84 * 362) / 377 },
+  //
+  // Width only: the height follows each shop's own logo rather than White
+  // Rose's 377x362, so nothing is squashed. It does mean a logo much taller
+  // than it is wide prints taller than BASE_HEIGHT below allows for — keep a
+  // shop's mark roughly square, or re-run scripts/check-receipt-height.mjs.
+  logo: { width: 84 },
   contactLine: {
     fontSize: 7.5,
     color: MUTED,
@@ -326,7 +346,7 @@ export function ReceiptBody({
   return (
     <>
       <View style={styles.header}>
-        <Image style={styles.logo} src={LOGO_BUFFER} />
+        {LOGO_SOURCE && <Image style={styles.logo} src={LOGO_SOURCE} />}
         <View style={styles.contacts}>
           {SHOP_CONTACTS.map((contact) => (
             <Text key={contact.label} style={styles.contactLine}>
