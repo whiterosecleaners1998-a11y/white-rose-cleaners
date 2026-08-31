@@ -96,3 +96,43 @@ export function ownerNewBookingMessage({
     2
   )}`;
 }
+
+/**
+ * Sent by a customer to the shop, from the website's pickup form, so it is
+ * written in their voice rather than the shop's — and in English, because they
+ * just filled in an English form to get here.
+ *
+ * It repeats what was already saved to the database. The wa.me link cannot
+ * send itself, so this exists to put the request on the owner's phone the
+ * moment it is made, instead of waiting for someone to look at the screen.
+ */
+export function pickupRequestMessage({
+  customerName,
+  phone,
+  address,
+  preferredDate,
+  timeSlot,
+  serviceType,
+  estimateTotal,
+  pieces,
+}: {
+  customerName: string;
+  phone: string;
+  address?: string;
+  preferredDate?: string;
+  timeSlot?: string;
+  serviceType?: string;
+  estimateTotal?: number;
+  pieces?: number;
+}): string {
+  const lines = [
+    `Pickup request from ${customerName} (${phone}).`,
+    serviceType ? `Service: ${serviceType}` : "",
+    preferredDate ? `Date: ${preferredDate}${timeSlot ? `, ${timeSlot}` : ""}` : "",
+    address ? `Address: ${address}` : "",
+    pieces && estimateTotal
+      ? `Estimated ${pieces} ${pieces === 1 ? "piece" : "pieces"}, about Rs. ${estimateTotal.toLocaleString()}`
+      : "",
+  ];
+  return lines.filter(Boolean).join("\n");
+}

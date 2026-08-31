@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { SHOP_LOGO, SHOP_TAGLINE } from "@/lib/shop";
 import LogoutButton from "./logout-button";
 import MobileNav from "./mobile-nav";
 import SidebarNav from "./sidebar-nav";
@@ -21,24 +21,30 @@ export default function PortalLayout({
             brand folds away and the toggle centres in its place. */}
         <div className="sidebar-brand flex items-center gap-2.5 border-b px-3 py-4">
           <Link
-            href="/"
+            href="/portal"
             className="sidebar-label flex min-w-0 items-center gap-2.5"
           >
-            <Image
-              src="/white-rose-logo.png"
-              alt=""
-              width={377}
-              height={362}
-              className="size-9 shrink-0 object-contain"
-              priority
-            />
+            {/* Every shop brings its own logo of its own shape, so this is a
+                plain img sized by CSS rather than next/image, which wants the
+                asset's pixel dimensions up front and would squash anything
+                that is not 377x362. */}
+            {SHOP_LOGO && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={SHOP_LOGO}
+                alt=""
+                className="size-9 shrink-0 object-contain"
+              />
+            )}
             <span className="min-w-0">
               <span className="block truncate text-sm leading-tight font-semibold">
                 {shopName}
               </span>
-              <span className="block truncate text-xs text-muted-foreground">
-                Since 1998
-              </span>
+              {SHOP_TAGLINE && (
+                <span className="block truncate text-xs text-muted-foreground">
+                  {SHOP_TAGLINE}
+                </span>
+              )}
             </span>
           </Link>
           <div className="ml-auto">
@@ -58,15 +64,13 @@ export default function PortalLayout({
       <div className="app-content flex min-h-screen flex-col lg:pl-60">
         {/* Only small screens need a top bar; on lg the sidebar is the nav. */}
         <header className="flex items-center justify-between border-b bg-card px-4 py-2.5 lg:hidden print:hidden">
-          <Link href="/" className="flex min-w-0 items-center gap-2">
-            <Image
-              src="/white-rose-logo.png"
-              alt={shopName}
-              width={377}
-              height={362}
-              className="h-9 w-auto shrink-0"
-              priority
-            />
+          <Link href="/portal" className="flex min-w-0 items-center gap-2">
+            {SHOP_LOGO ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={SHOP_LOGO} alt={shopName} className="h-9 w-auto shrink-0" />
+            ) : (
+              <span className="truncate text-sm font-semibold">{shopName}</span>
+            )}
           </Link>
           <MobileNav />
         </header>

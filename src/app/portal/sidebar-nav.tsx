@@ -2,14 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, KeyRound, Search, SquarePen, Tags } from "lucide-react";
+import {
+  ClipboardList,
+  Inbox,
+  KeyRound,
+  Search,
+  SquarePen,
+  Tags,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  /** Only "/" needs an exact match; the rest own their subpaths. */
+  /** Only "/portal" needs an exact match; the rest own their subpaths. */
   exact?: boolean;
 };
 
@@ -17,16 +24,17 @@ const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
   {
     heading: "Bookings",
     items: [
-      { href: "/", label: "New Booking", icon: SquarePen, exact: true },
-      { href: "/orders", label: "Orders", icon: ClipboardList },
-      { href: "/search", label: "Find by Phone", icon: Search },
+      { href: "/portal", label: "New Booking", icon: SquarePen, exact: true },
+      { href: "/portal/orders", label: "Orders", icon: ClipboardList },
+      { href: "/portal/requests", label: "Pickup Requests", icon: Inbox },
+      { href: "/portal/search", label: "Find by Phone", icon: Search },
     ],
   },
   {
     heading: "Settings",
     items: [
-      { href: "/settings/prices", label: "Price List", icon: Tags },
-      { href: "/settings/password", label: "Password", icon: KeyRound },
+      { href: "/portal/settings/prices", label: "Price List", icon: Tags },
+      { href: "/portal/settings/password", label: "Password", icon: KeyRound },
     ],
   },
 ];

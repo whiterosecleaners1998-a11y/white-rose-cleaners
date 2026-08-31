@@ -160,7 +160,7 @@ export default function BookingActions({
       if (!res.ok) throw new Error(data.error ?? "Delete failed");
       toast.success(`Booking ${bookingCode} deleted.`);
       // Nothing left to show on this page.
-      router.push("/orders");
+      router.push("/portal/orders");
       router.refresh();
     } catch (error) {
       toast.error(

@@ -50,7 +50,7 @@ export default async function BookingDetailPage({
     <>
       <div className="space-y-4 print-hide-when-receipt">
       <Link
-        href="/"
+        href="/portal"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground print:hidden"
       >
         <ArrowLeft className="size-3.5" />

@@ -13,23 +13,22 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SHOP_LOGO } from "@/lib/shop";
 
-// Routes a signed-in user may be sent back to. Anything else — an off-site URL,
-// a protocol-relative "//evil.com", or a typo'd path like "/l" — falls back to "/"
-// so a successful login never lands on a 404 or leaves the site.
-const RETURNABLE_PATHS = [
-  "/orders",
-  "/search",
-  "/settings/prices",
-  "/settings/password",
-  "/bookings/",
-];
+/** Where a login lands when it was not sent here from somewhere in particular. */
+const PORTAL_HOME = "/portal";
 
+// Where a signed-in user may be sent back to. This used to be a list of the
+// portal's pages, kept in step by hand; now that the portal is one subtree, the
+// subtree is the rule. Anything else — an off-site URL, a protocol-relative
+// "//evil.com", a decoy like "/portal-login" — falls back to the portal home, so
+// a successful login never lands on a 404 or leaves the site.
 function safeRedirectPath(raw: string | null): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/";
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return PORTAL_HOME;
   const path = raw.split(/[?#]/)[0];
-  if (path === "/") return raw;
-  return RETURNABLE_PATHS.some((allowed) => path.startsWith(allowed)) ? raw : "/";
+  return path === PORTAL_HOME || path.startsWith(`${PORTAL_HOME}/`)
+    ? raw
+    : PORTAL_HOME;
 }
 
 function LoginForm() {
@@ -64,14 +63,12 @@ function LoginForm() {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
-        <Image
-          src="/white-rose-logo.png"
-          alt="White Rose Cleaner"
-          width={377}
-          height={362}
-          className="mx-auto mb-1 h-24 w-auto"
-          priority
-        />
+        {/* Sized by height alone so a new shop's logo keeps its own shape —
+            see lib/shop.ts. */}
+        {SHOP_LOGO && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={SHOP_LOGO} alt="" className="mx-auto mb-1 h-24 w-auto" />
+        )}
         <CardDescription className="text-center">
           Enter the shop password to continue.
         </CardDescription>

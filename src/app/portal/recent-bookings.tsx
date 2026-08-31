@@ -191,7 +191,7 @@ export default function RecentBookings({
               <>
                 {" "}
                 &middot;{" "}
-                <Link href="/orders" className="underline hover:text-foreground">
+                <Link href="/portal/orders" className="underline hover:text-foreground">
                   see every order
                 </Link>
               </>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Afacad, Geist_Mono } from "next/font/google";
+import { Afacad, Archivo, Geist_Mono } from "next/font/google";
 import { RESTORE_SIDEBAR_SCRIPT } from "@/lib/sidebar";
 import InlineScript from "@/components/inline-script";
 import { Toaster } from "@/components/ui/sonner";
@@ -13,6 +13,15 @@ const afacad = Afacad({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// Headlines on the public site only — see --font-display in globals.css. The
+// width axis comes along because the logo's capitals are wider than a default
+// grotesque, and the hero is set to match them.
+const archivo = Archivo({
+  variable: "--font-archivo",
+  subsets: ["latin"],
+  axes: ["wdth"],
 });
 
 export const metadata: Metadata = {
@@ -35,7 +44,7 @@ export default function RootLayout({
       lang="en"
       data-sidebar="expanded"
       suppressHydrationWarning
-      className={`${afacad.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${afacad.variable} ${archivo.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
         {/* Inline rather than next/script: beforeInteractive queues into

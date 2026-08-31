@@ -85,7 +85,7 @@ export default function OrdersFilters() {
             size="sm"
             onClick={() => {
               setQ("");
-              router.push("/orders");
+              router.push("/portal/orders");
             }}
           >
             <X className="size-3.5" />

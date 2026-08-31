@@ -14,6 +14,11 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --font-heading: var(--font-sans);
+  /* The public site's headline face. Archivo is the grotesque closest to the
+     black, slightly-wide capitals of the logo wordmark, so a heading and the
+     logo above it read as the same voice. The portal keeps --font-sans. */
+  --font-display: var(--font-archivo), var(--font-geist-sans), ui-sans-serif,
+    system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -213,4 +218,60 @@
     padding-left: 0;
     padding-right: 0;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   The claim ticket.
+
+   The public site keeps coming back to one shape: the numbered ticket the
+   counter hands over. It is the thing the shop actually gives you, so it is
+   what the site is built out of — the hero holds one, and the price list is
+   one, unrolled.
+
+   A ticket is read by its tear line: a dashed rule with a bite taken out of
+   each side. The bites are filled with whatever sits behind the ticket, which
+   changes between the dark hero and the pale price section, so the colour comes
+   in as --notch-bg at the call site rather than being fixed here.
+   --------------------------------------------------------------------------- */
+.ticket-tear {
+  position: relative;
+  border-top: 1px dashed color-mix(in srgb, currentColor 30%, transparent);
+}
+
+.ticket-tear::before,
+.ticket-tear::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: var(--notch, 1.5rem);
+  height: var(--notch, 1.5rem);
+  border-radius: 9999px;
+  background: var(--notch-bg, var(--background));
+  transform: translateY(-50%);
+}
+
+.ticket-tear::before {
+  left: calc(var(--notch, 1.5rem) / -2);
+}
+
+.ticket-tear::after {
+  right: calc(var(--notch, 1.5rem) / -2);
+}
+
+/* Dotted leaders between a garment and its price, the way a printed list sets
+   them. The dots are a repeating background on a flexible spacer, so they fill
+   exactly the gap left over and never wrap onto their own line. */
+.leader {
+  flex: 1 1 auto;
+  align-self: end;
+  margin-bottom: 0.3em;
+  min-width: 1rem;
+  height: 1px;
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, currentColor 40%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 6px 2px;
+  background-repeat: repeat-x;
 }

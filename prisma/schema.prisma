@@ -97,3 +97,58 @@ model ShopCredential {
   passwordHash String
   updatedAt    DateTime @updatedAt
 }
+
+// What a customer asks for on the public website, before anything has changed
+// hands. Deliberately not a Booking: nothing has been counted, nothing is
+// owed, and it may never turn into anything. The counter reads these on
+// /portal/requests and raises a real Booking from one if it is genuine.
+enum RequestKind {
+  // "Come and collect my washing" — the pickup form.
+  PICKUP
+  // "I want one of the monthly packages" — the packages page.
+  PACKAGE
+}
+
+enum RequestStatus {
+  NEW
+  // Someone at the shop has spoken to them. Kept apart from CLOSED so a
+  // request being worked on does not look the same as one that is finished.
+  CONTACTED
+  CLOSED
+}
+
+model ServiceRequest {
+  id            String               @id @default(cuid())
+  kind          RequestKind          @default(PICKUP)
+  status        RequestStatus        @default(NEW)
+  customerName  String
+  phone         String
+  email         String?
+  address       String?
+  preferredDate DateTime?
+  timeSlot      String?
+  serviceType   String?
+  // Which tier they picked, on a PACKAGE request.
+  packageName   String?
+  note          String?
+  // What the bill calculator came to, if they arrived that way. Stored as a
+  // snapshot with its own line items rather than pointing at the price list,
+  // because prices move and the figure the customer was shown should not move
+  // with them.
+  estimateTotal Decimal?             @db.Decimal(10, 2)
+  items         ServiceRequestItem[]
+  createdAt     DateTime             @default(now())
+  handledAt     DateTime?
+
+  @@index([status, createdAt])
+  @@index([phone])
+}
+
+model ServiceRequestItem {
+  id        String         @id @default(cuid())
+  request   ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  requestId String
+  itemName  String
+  unitPrice Decimal        @db.Decimal(10, 2)
+  quantity  Int
+}

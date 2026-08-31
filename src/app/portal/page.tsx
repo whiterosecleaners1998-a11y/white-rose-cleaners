@@ -83,7 +83,7 @@ export default async function DashboardPage() {
             <Alert>
               <AlertDescription>
                 No price list items yet. Add some in{" "}
-                <Link href="/settings/prices" className="underline">
+                <Link href="/portal/settings/prices" className="underline">
                   Price List
                 </Link>{" "}
                 first.

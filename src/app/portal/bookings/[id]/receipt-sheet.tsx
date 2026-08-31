@@ -5,6 +5,7 @@ import {
   statusLabel,
   PAYMENT_METHODS,
 } from "@/lib/receipt-data";
+import { SHOP_LOGO } from "@/lib/shop";
 
 /**
  * The printable receipt. Hidden on screen, shown only to the printer, so that
@@ -106,16 +107,20 @@ export default function ReceiptSheet({
             so it is printed large enough to be read as the name. Setting the
             shop name in type underneath it only said the same thing twice.
             Height derived from the asset's own 377x362 so it is never squashed. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/white-rose-logo.png"
-          alt=""
-          style={{
-            width: "84pt",
-            height: `${(84 * 362) / 377}pt`,
-            display: "inline-block",
-          }}
-        />
+        {SHOP_LOGO && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={SHOP_LOGO}
+            alt=""
+            style={{
+              width: "84pt",
+              // Height follows the file's own shape rather than a fixed ratio,
+              // so a taller or wider logo is not squashed on the slip.
+              height: "auto",
+              display: "inline-block",
+            }}
+          />
+        )}
         <div style={{ marginTop: "5pt" }}>
           {contacts.map((contact) => (
             <div

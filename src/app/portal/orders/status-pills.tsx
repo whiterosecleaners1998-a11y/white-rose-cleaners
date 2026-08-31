@@ -24,7 +24,7 @@ export default function StatusPills() {
     else params.set("status", status);
     params.delete("page");
     const query = params.toString();
-    router.push(query ? `/orders?${query}` : "/orders");
+    router.push(query ? `/portal/orders?${query}` : "/portal/orders");
   }
 
   return (
