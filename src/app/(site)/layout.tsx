@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SHOP_LOGO } from "@/lib/shop";
+import { SHOP_LOGO, SHOP_LOGO_DARK } from "@/lib/shop";
 import { laundryPackages } from "@/lib/packages";
 
 /**
@@ -75,10 +75,23 @@ export default function SiteLayout({
       <main className="flex-1">{children}</main>
 
       <footer className="bg-[#0c0a09] text-white/70">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-5 py-10 sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-display text-sm font-extrabold tracking-[0.14em] text-white uppercase">
-            {shopName}
-          </p>
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-5 py-10 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+          {/* The reversed mark if the shop has one; otherwise its name in type,
+              which is what a black-on-white logo would have come to here. */}
+          {SHOP_LOGO_DARK ? (
+            <Link href="/" className="shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={SHOP_LOGO_DARK}
+                alt={shopName}
+                className="h-16 w-auto"
+              />
+            </Link>
+          ) : (
+            <p className="font-display text-sm font-extrabold tracking-[0.14em] text-white uppercase">
+              {shopName}
+            </p>
+          )}
           <p className="text-sm">
             &copy; {new Date().getFullYear()} {shopName}. Portal and site by{" "}
             <a
